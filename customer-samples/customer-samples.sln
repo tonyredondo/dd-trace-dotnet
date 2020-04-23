@@ -21,6 +21,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NLog45Example", "AutomaticT
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NLog46Example", "AutomaticTraceIdInjection\NLog46Example\NLog46Example.csproj", "{82DD704F-20C9-4F77-B3ED-7E555E8077C8}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AzureAppServices", "AzureAppServices", "{037ECAE0-D565-44A8-BC4E-29195D81FD80}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "myFirstAzureWebApp", "AzureAppServices\myFirstAzureWebApp\myFirstAzureWebApp.csproj", "{E882F17B-7DEB-4F04-B977-0FB070B4489B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,6 +47,10 @@ Global
 		{82DD704F-20C9-4F77-B3ED-7E555E8077C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{82DD704F-20C9-4F77-B3ED-7E555E8077C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{82DD704F-20C9-4F77-B3ED-7E555E8077C8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E882F17B-7DEB-4F04-B977-0FB070B4489B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E882F17B-7DEB-4F04-B977-0FB070B4489B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E882F17B-7DEB-4F04-B977-0FB070B4489B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E882F17B-7DEB-4F04-B977-0FB070B4489B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -52,6 +60,7 @@ Global
 		{51F8B356-6F95-460A-9549-52534B85042D} = {8AD58831-2198-4661-AC87-EFA754EDC4E9}
 		{B987A36C-111D-41B7-9DA0-35DF790DD450} = {8AD58831-2198-4661-AC87-EFA754EDC4E9}
 		{82DD704F-20C9-4F77-B3ED-7E555E8077C8} = {8AD58831-2198-4661-AC87-EFA754EDC4E9}
+		{E882F17B-7DEB-4F04-B977-0FB070B4489B} = {037ECAE0-D565-44A8-BC4E-29195D81FD80}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1C64C3C7-7F87-46D4-88F8-1DB81303FBAC}

@@ -1,0 +1,1 @@
+This follows the example at https://docs.microsoft.com/en-us/azure/app-service/app-service-web-get-started-dotnet-framework
