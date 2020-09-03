@@ -12,6 +12,7 @@ namespace Samples.AspNet.HttpClientIssue.WebApi
     {
         public static void Register(HttpConfiguration config)
         {
+            // See small sample here: https://docs.microsoft.com/en-us/ef/core/get-started/?tabs=visual-studio
             // Initialize some DB commands
             using (var db = new BloggingContext())
             {
