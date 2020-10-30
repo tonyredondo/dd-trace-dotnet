@@ -20,6 +20,10 @@ Integration tests | [![Build Status](https://dev.azure.com/datadoghq/dd-trace-do
 
 # Development
 
+## Contributing
+
+See [docs/CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Components
 
 **[Datadog Agent](https://github.com/DataDog/datadog-agent)**: A service that runs on your application servers, accepting trace data from the Datadog Tracer and sending it to Datadog. The Agent is not part of this repo; it's the same Agent to which all Datadog tracers (e.g. Go, Python, Java, Ruby) send data.
