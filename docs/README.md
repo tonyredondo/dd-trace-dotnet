@@ -58,28 +58,16 @@ From a _Developer Command Prompt for VS 2019_:
 rem Restore NuGet packages
 rem nuget.exe is required for command line restore because msbuild doesn't support packages.config
 rem (see https://github.com/NuGet/Home/issues/7386)
-nuget restore Datadog.Trace.sln
+nuget restore Datadog.Trace.Native.sln
 
-rem Build C# projects (Platform: always AnyCPU)
-msbuild Datadog.Trace.proj /t:BuildCsharp /p:Configuration=Release
-
-rem Build NuGet packages
+rem Build NuGet packages:
 dotnet pack src\Datadog.Trace\Datadog.Trace.csproj
 dotnet pack src\Datadog.Trace.OpenTracing\Datadog.Trace.OpenTracing.csproj
 
-rem Build C++ projects
-rem The native profiler depends on the Datadog.Trace.ClrProfiler.Managed.Loader C# project so be sure that is built first
-msbuild Datadog.Trace.proj /t:BuildCpp /p:Configuration=Release;Platform=x64
-msbuild Datadog.Trace.proj /t:BuildCpp /p:Configuration=Release;Platform=x86
+rem Build MSI installers:
+msbuild Datadog.Trace.proj /t:msi /p:Configuration=Release;Platform=All
 
-rem Build MSI installer for Windows x64 (supports both x64 and x86 apps)
-msbuild Datadog.Trace.proj /t:msi /p:Configuration=Release;Platform=x64
-
-rem Build MSI installer for Windows x86 (supports x86 apps only)
-msbuild Datadog.Trace.proj /t:msi /p:Configuration=Release;Platform=x86
-
-rem Build tracer home directory for Windows.
-rem Valid values for property `Platform` are `x64`, `x86`, and `All`.
+rem Build tracer home directory:
 msbuild Datadog.Trace.proj /t:CreateHomeDirectory /p:Configuration=Release;Platform=All
 ```
 
@@ -106,6 +94,9 @@ docker-compose run Profiler
 
 # run integration tests
 docker-compose run IntegrationTests
+
+# build installer packages (rpm, deb, targz)
+docker-compose run package
 ```
 
 ## Further Reading
