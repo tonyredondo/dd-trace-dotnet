@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
+using System.Web.Routing;
 using Datadog.Trace.Configuration;
 using Datadog.Trace.ExtensionMethods;
 using Datadog.Trace.Logging;
@@ -94,14 +95,15 @@ namespace Datadog.Trace.AspNet
                     return;
                 }
 
-                var httpContext = (sender as HttpApplication)?.Context;
+                var legacyHttpContext = (sender as HttpApplication)?.Context;
 
-                if (httpContext == null)
+                if (legacyHttpContext == null)
                 {
                     return;
                 }
 
-                HttpRequest httpRequest = httpContext.Request;
+                HttpContextBase httpContext = new HttpContextWrapper(legacyHttpContext);
+                HttpRequestBase httpRequest = httpContext.Request;
                 SpanContext propagatedContext = null;
                 var tagsFromHeaders = Enumerable.Empty<KeyValuePair<string, string>>();
 
@@ -120,15 +122,20 @@ namespace Datadog.Trace.AspNet
                     }
                 }
 
+                RouteData routeData = RouteTable.Routes.GetRouteData(httpContext);
+                GetRouteValues(routeData, out string route, out _, out _);
+
                 string host = httpRequest.Headers.Get("Host");
                 string httpMethod = httpRequest.HttpMethod.ToUpperInvariant();
                 string url = httpRequest.RawUrl.ToLowerInvariant();
                 string path = UriHelpers.GetRelativeUrl(httpRequest.Url, tryRemoveIds: true);
-                string resourceName = $"{httpMethod} {path.ToLowerInvariant()}";
+                string resourceUrl = route ?? path.ToLowerInvariant();
+                string resourceName = $"{httpMethod} {resourceUrl}";
 
-                var tags = new WebTags();
+                var tags = new AspNetTags();
                 scope = tracer.StartActiveWithTags(_requestOperationName, propagatedContext, tags: tags);
                 scope.Span.DecorateWebServerSpan(resourceName, httpMethod, host, url, tags, tagsFromHeaders);
+                tags.AspNetRoute = route;
 
                 tags.SetAnalyticsSampleRate(IntegrationId, tracer.Settings, enabledWithGlobalSetting: true);
 
@@ -144,6 +151,51 @@ namespace Datadog.Trace.AspNet
                 // Dispose here, as the scope won't be in context items and won't get disposed on request end in that case...
                 scope?.Dispose();
                 Log.Error(ex, "Datadog ASP.NET HttpModule instrumentation error");
+            }
+        }
+
+        private void GetRouteValues(RouteData routeData, out string url, out string controllerName, out string actionName)
+        {
+            url = null;
+            controllerName = null;
+            actionName = null;
+
+            if (routeData != null &&
+                routeData.Route is not Route &&
+                routeData.Values.TryGetValue("MS_DirectRouteMatches", out object routeMatches))
+            {
+                // when using attribute routing, route data is stored in a nested route key
+                RouteData attributeRouteData = (routeMatches as IEnumerable<RouteData>)?.FirstOrDefault();
+
+                if (attributeRouteData != null)
+                {
+                    routeData = attributeRouteData;
+                }
+            }
+
+            if (routeData?.Route is Route route)
+            {
+                url = route.Url?.ToLowerInvariant() ?? string.Empty;
+
+                if (url.FirstOrDefault() != '/')
+                {
+                    url = "/" + url;
+                }
+            }
+
+            RouteValueDictionary routeValues = routeData?.Values;
+
+            if (routeValues != null)
+            {
+                if (routeValues.TryGetValue("controller", out object controllerNameObj))
+                {
+                    controllerName = controllerNameObj?.ToString().ToLowerInvariant();
+                }
+
+                if (routeValues.TryGetValue("action", out object actionNameObj))
+                {
+                    actionName = actionNameObj?.ToString().ToLowerInvariant();
+                }
             }
         }
 
