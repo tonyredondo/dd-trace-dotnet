@@ -66,41 +66,14 @@ namespace Datadog.Trace.ClrProfiler.Integrations
                 string resourceName = null;
 
                 RouteData routeData = controllerContext.GetProperty<RouteData>("RouteData").GetValueOrDefault();
-                Route route = routeData?.Route as Route;
-                RouteValueDictionary routeValues = routeData?.Values;
-
-                if (route == null && routeData?.Route.GetType().FullName == RouteCollectionRouteTypeName)
-                {
-                    var routeMatches = routeValues?.GetValueOrDefault("MS_DirectRouteMatches") as List<RouteData>;
-
-                    if (routeMatches?.Count > 0)
-                    {
-                        // route was defined using attribute routing i.e. [Route("/path/{id}")]
-                        // get route and routeValues from the RouteData in routeMatches
-                        route = routeMatches[0].Route as Route;
-                        routeValues = routeMatches[0].Values;
-
-                        if (route != null)
-                        {
-                            var resourceUrl = route.Url?.ToLowerInvariant() ?? string.Empty;
-                            if (resourceUrl.FirstOrDefault() != '/')
-                            {
-                                resourceUrl = string.Concat("/", resourceUrl);
-                            }
-
-                            resourceName = $"{httpMethod} {resourceUrl}";
-                        }
-                    }
-                }
+                // RouteData routeData = RouteTable.Routes.GetRouteData(httpContext);
+                // GetRouteValues(httpContext, out string route, out string controllerName, out string actionName);
 
                 if (string.IsNullOrEmpty(resourceName) && httpContext.Request.Url != null)
                 {
                     var cleanUri = UriHelpers.GetRelativeUrl(httpContext.Request.Url, tryRemoveIds: true);
                     resourceName = $"{httpMethod} {cleanUri.ToLowerInvariant()}";
                 }
-
-                string controllerName = (routeValues?.GetValueOrDefault("controller") as string)?.ToLowerInvariant();
-                string actionName = (routeValues?.GetValueOrDefault("action") as string)?.ToLowerInvariant();
 
                 if (string.IsNullOrEmpty(resourceName))
                 {
