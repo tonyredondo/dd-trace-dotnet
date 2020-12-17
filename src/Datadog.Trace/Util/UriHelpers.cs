@@ -127,6 +127,80 @@ namespace Datadog.Trace.Util
 #endif
         }
 
+#if NETCOREAPP
+        internal static bool ShouldReplace(ReadOnlySpan<char> path)
+        {
+            if (path.Length == 0)
+            {
+                return false;
+            }
+
+            foreach (var c in path)
+            {
+                switch (c)
+                {
+                    case >= '0' and <= '9':
+                        continue;
+                    case >= 'a' and <= 'f':
+                    case >= 'A' and <= 'F':
+                        if (path.Length < 16)
+                        {
+                            // don't be too aggresive replacing
+                            // short hex segments like "/a" or "/cab",
+                            // they are likely not ids
+                            return false;
+                        }
+
+                        continue;
+                    case '-':
+                        continue;
+                    default:
+                        return false;
+                }
+            }
+
+            return true;
+        }
+#else
+        internal static bool ShouldReplace(string path, int startIndex, int length)
+        {
+            if (length == 0)
+            {
+                return false;
+            }
+
+            int lastIndex = startIndex + length;
+
+            for (int index = startIndex; index < lastIndex && index < path.Length; index++)
+            {
+                char c = path[index];
+
+                switch (c)
+                {
+                    case >= '0' and <= '9':
+                        continue;
+                    case >= 'a' and <= 'f':
+                    case >= 'A' and <= 'F':
+                        if (path.Length < 16)
+                        {
+                            // don't be too aggresive replacing
+                            // short hex segments like "/a" or "/cab",
+                            // they are likely not ids
+                            return false;
+                        }
+
+                        continue;
+                    case '-':
+                        continue;
+                    default:
+                        return false;
+                }
+            }
+
+            return true;
+        }
+#endif
+
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static bool IsAGuid(string segment, string format) => Guid.TryParseExact(segment, format, out _);
 
