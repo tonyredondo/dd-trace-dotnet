@@ -39,7 +39,7 @@ namespace Datadog.Trace
         /// </summary>
         public void Close()
         {
-            _scopeManager.Close(this);
+            _scopeManager.Close(this, false);
 
             if (_finishOnClose)
             {
@@ -60,6 +60,16 @@ namespace Datadog.Trace
             {
                 // Ignore disposal exceptions here...
                 // TODO: Log? only in test/debug? How should Close() concerns be handled (i.e. independent?)
+            }
+        }
+
+        internal void CloseFromContinuation()
+        {
+            _scopeManager.Close(this, true);
+
+            if (_finishOnClose)
+            {
+                Span.Finish();
             }
         }
     }

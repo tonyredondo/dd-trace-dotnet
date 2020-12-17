@@ -19,6 +19,8 @@ namespace Datadog.Trace
 
         public abstract Scope Active { get; protected set; }
 
+        public abstract void SetActiveScopeReference(Scope scope);
+
         public Scope Activate(Span span, bool finishOnClose)
         {
             var newParent = Active;
@@ -39,7 +41,7 @@ namespace Datadog.Trace
             return scope;
         }
 
-        public void Close(Scope scope)
+        public void Close(Scope scope, bool fromContinuation)
         {
             var current = Active;
             var isRootSpan = scope.Parent == null;
@@ -53,7 +55,17 @@ namespace Datadog.Trace
 
             // if the scope that was just closed was the active scope,
             // set its parent as the new active scope
-            Active = scope.Parent;
+            if (fromContinuation)
+            {
+                // If the close came from a continuation we need to change the inner reference to the scope
+                // That way we can modify values from the parent ExecutionContext
+                SetActiveScopeReference(scope.Parent);
+            }
+            else
+            {
+                Active = scope.Parent;
+            }
+
             SpanDeactivated?.Invoke(this, new SpanEventArgs(scope.Span));
 
             if (!isRootSpan)

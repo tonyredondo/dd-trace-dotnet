@@ -21,6 +21,6 @@ namespace Datadog.Trace
 
         Scope Activate(Span span, bool finishOnClose);
 
-        void Close(Scope scope);
+        void Close(Scope scope, bool fromContinuation);
     }
 }
