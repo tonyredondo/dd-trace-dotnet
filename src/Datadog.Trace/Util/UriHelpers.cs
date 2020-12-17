@@ -30,22 +30,21 @@ namespace Datadog.Trace.Util
         public static string GetRelativeUrl(string uri, bool tryRemoveIds)
         {
             // try to remove segments that look like ids
-            return tryRemoveIds ? CleanUriSegment(uri) : uri;
+            return tryRemoveIds ? RemoveIds(uri) : uri;
         }
 
-        public static string CleanUriSegment(string absolutePath)
+        public static string RemoveIds(string absolutePath)
         {
             if (string.IsNullOrWhiteSpace(absolutePath) || (absolutePath.Length == 1 && absolutePath[0] == '/'))
             {
                 return absolutePath;
             }
 
+            // Sanitized url will be at worse as long as the original
+            var sb = StringBuilderCache.Acquire(absolutePath.Length);
+
 #if NETCOREAPP
             ReadOnlySpan<char> absPath = absolutePath.AsSpan();
-
-            // Sanitized url will be at worse as long as the original
-            var sb = StringBuilderCache.Acquire(absPath.Length);
-
             int previousIndex = 0;
             int index;
 
@@ -53,19 +52,15 @@ namespace Datadog.Trace.Util
             {
                 ReadOnlySpan<char> nStart = absPath.Slice(previousIndex);
                 index = nStart.IndexOf('/');
-                ReadOnlySpan<char> segment = index == -1 ? nStart : nStart.Slice(0, index);
 
-                // replace path segments that look like numbers or guid
-                // GUID format N "d85b1407351d4694939203acc5870eb1" length: 32
-                // GUID format D "d85b1407-351d-4694-9392-03acc5870eb1" length: 36 with dashes in indices 8, 13, 18 and 23.
-                if (long.TryParse(segment, out _) ||
-                    (segment.Length == 32 && IsAGuid(segment, "N")) ||
-                    (segment.Length == 36 && IsAGuid(segment, "D")))
+                // replace path segments that look like numbers or guids
+                if (ShouldReplace(absPath))
                 {
                     sb.Append('?');
                 }
                 else
                 {
+                    ReadOnlySpan<char> segment = index == -1 ? nStart : nStart.Slice(0, index);
                     sb.Append(segment);
                 }
 
@@ -80,36 +75,33 @@ namespace Datadog.Trace.Util
 
             return StringBuilderCache.GetStringAndRelease(sb);
 #else
-            // Sanitized url will be at worse as long as the original
-            var sb = StringBuilderCache.Acquire(absolutePath.Length);
-
             int previousIndex = 0;
             int index = 0;
 
             do
             {
                 index = absolutePath.IndexOf('/', previousIndex);
-
                 string segment;
+                int length;
 
                 if (index == -1)
                 {
                     // Last segment
-                    segment = absolutePath.Substring(previousIndex);
+                    length = absolutePath.Length - previousIndex;
                 }
                 else
                 {
-                    segment = absolutePath.Substring(previousIndex, index - previousIndex);
+                    length = index - previousIndex;
                 }
 
-                // replace path segments that look like numbers or guid
-                // GUID format N "d85b1407351d4694939203acc5870eb1" length: 32
-                // GUID format D "d85b1407-351d-4694-9392-03acc5870eb1" length: 36 with dashes in indices 8, 13, 18 and 23.
-                if (long.TryParse(segment, out _) ||
-                    (segment.Length == 32 && IsAGuid(segment, "N")) ||
-                    (segment.Length == 36 && IsAGuid(segment, "D")))
+                if (ShouldReplace(absolutePath, previousIndex, length))
                 {
+                    // replace path segments that look like numbers or guids
                     segment = "?";
+                }
+                else
+                {
+                    segment = absolutePath.Substring(previousIndex, length);
                 }
 
                 sb.Append(segment);

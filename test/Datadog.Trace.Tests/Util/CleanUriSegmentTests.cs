@@ -16,7 +16,7 @@ namespace Datadog.Trace.Tests.Util
         [InlineData("/controller/action/", "/controller/action/")]
         public void CleanUriSegmentTest(string url, string expected)
         {
-            Assert.Equal(expected, Trace.Util.UriHelpers.CleanUriSegment(url));
+            Assert.Equal(expected, Trace.Util.UriHelpers.RemoveIds(url));
         }
     }
 }
