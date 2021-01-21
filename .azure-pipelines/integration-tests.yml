@@ -452,6 +452,9 @@ jobs:
       restoreSolution: test/test-applications/aspnet/samples-iis.sln
       verbosityRestore: Normal
 
+  - pwsh: Get-PSDrive
+    displayName: HDD Info
+
   - task: MSBuild@1
     displayName: Publish IIS samples
     inputs:
