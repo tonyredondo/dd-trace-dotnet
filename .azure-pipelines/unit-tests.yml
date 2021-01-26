@@ -96,6 +96,7 @@ jobs:
       command: test
       configuration: $(buildConfiguration)
       projects: test/**/*.Tests.csproj
+      arguments: -v "n" 
     env:
       DD_SERVICE_NAME: dd-tracer-dotnet
 
@@ -124,6 +125,7 @@ jobs:
       command: test
       configuration: $(buildConfiguration)
       projects: test/**/*.Tests.csproj
+      arguments: -v "n" 
 
 - job: managed_macos
   pool:
@@ -173,6 +175,7 @@ jobs:
       command: test
       configuration: $(buildConfiguration)
       projects: test/**/*.Tests.csproj
+      arguments: -v "n" 
 
 
 - job: windows_profiler
