@@ -417,6 +417,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Samples.OracleMDA", "test\t
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Samples.OracleMDA.Core", "test\test-applications\integrations\Samples.OracleMDA.Core\Samples.OracleMDA.Core.csproj", "{B0F3148C-1251-4AAA-B6E6-357A8E675EA1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "_build", "build\_build\_build.csproj", "{B4073E48-73D5-4625-9B49-5C3B0B859071}"
+EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		src\Datadog.Trace.Ci.Shared\Datadog.Trace.Ci.Shared.projitems*{85f35aaf-d102-4960-8b41-3bd9cbd0e77f}*SharedItemsImports = 5
@@ -1694,6 +1696,7 @@ Global
 		{69B678F6-51CF-4A5B-8DEC-1F9CEDC5C9E2} = {BAF8F246-3645-42AD-B1D0-0F7EAFBAB34A}
 		{BD46EFCC-177C-466E-81DF-39314B780ADA} = {BAF8F246-3645-42AD-B1D0-0F7EAFBAB34A}
 		{B0F3148C-1251-4AAA-B6E6-357A8E675EA1} = {BAF8F246-3645-42AD-B1D0-0F7EAFBAB34A}
+		{B4073E48-73D5-4625-9B49-5C3B0B859071} = {A0C5FBBB-CFB2-4FB9-B8F0-55676E9DCF06}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {160A1D00-1F5B-40F8-A155-621B4459D78F}
