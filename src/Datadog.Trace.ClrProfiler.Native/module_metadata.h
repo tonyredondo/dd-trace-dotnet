@@ -10,14 +10,15 @@
 #include "com_ptr.h"
 #include "integration.h"
 #include "string.h"
+#include "robin_hood.h"
 
 namespace trace {
 
 class ModuleMetadata {
  private:
-  std::unordered_map<WSTRING, mdMemberRef> wrapper_refs{};
-  std::unordered_map<WSTRING, mdTypeRef> wrapper_parent_type{};
-  std::unordered_set<WSTRING> failed_wrapper_keys{};
+  robin_hood::unordered_map<WSTRING, mdMemberRef> wrapper_refs{};
+  robin_hood::unordered_map<WSTRING, mdTypeRef> wrapper_parent_type{};
+  robin_hood::unordered_set<WSTRING> failed_wrapper_keys{};
   CallTargetTokens* calltargetTokens = nullptr;
 
  public:

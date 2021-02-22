@@ -11,6 +11,7 @@
 #include "corprof.h"
 #include "logging.h"
 #include "module_metadata.h"
+#include "robin_hood.h"
 
 namespace trace {
 
@@ -34,7 +35,7 @@ class RejitHandlerModuleMethod {
   FunctionInfo* functionInfo;
   MethodReplacement* methodReplacement;
   std::mutex functionsIds_lock;
-  std::unordered_set<FunctionID> functionsIds;
+  robin_hood::unordered_set<FunctionID> functionsIds;
   void* module;
 
  public:
@@ -76,7 +77,7 @@ class RejitHandlerModule {
   ModuleID moduleId;
   ModuleMetadata* metadata;
   std::mutex methods_lock;
-  std::unordered_map<mdMethodDef, RejitHandlerModuleMethod*> methods;
+  robin_hood::unordered_map<mdMethodDef, RejitHandlerModuleMethod*> methods;
   void* handler;
 
  public:
@@ -103,9 +104,9 @@ class RejitHandlerModule {
 class RejitHandler {
  private:
   std::mutex modules_lock;
-  std::unordered_map<ModuleID, RejitHandlerModule*> modules;
+  robin_hood::unordered_map<ModuleID, RejitHandlerModule*> modules;
   std::mutex methodByFunctionId_lock;
-  std::unordered_map<FunctionID, RejitHandlerModuleMethod*> methodByFunctionId;
+  robin_hood::unordered_map<FunctionID, RejitHandlerModuleMethod*> methodByFunctionId;
   ICorProfilerInfo4* profilerInfo;
   std::function<HRESULT(RejitHandlerModule*, RejitHandlerModuleMethod*)> rewriteCallback;
 
