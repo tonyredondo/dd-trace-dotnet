@@ -42,6 +42,9 @@ class Build : NukeBuild
     [Parameter("The location to publish the build output. Default is ./src/bin/managed-publish ")]
     readonly AbsolutePath PublishOutput;
     
+    [Parameter("The location to restore Nuget packages (optional) ")]
+    readonly AbsolutePath NugetManagedCacheFolder;
+    
     AbsolutePath PublishOutputPath => PublishOutput ?? (SourceDirectory / "bin" / "managed-publish");
 
     [Solution("Datadog.Trace.sln")] readonly Solution Solution;
@@ -71,27 +74,25 @@ class Build : NukeBuild
             NuGetTasks.NuGetRestore(s => s
                 .SetTargetPath(Solution)
                 .SetVerbosity(NuGetVerbosity.Normal));
+
             DotNetRestore(s => s
                 .SetProjectFile(Solution)
-                .SetVerbosity(DotNetVerbosity.Normal));
+                .SetVerbosity(DotNetVerbosity.Normal)
+                .SetNoWarnDotNetCore3()
+                .When(!string.IsNullOrEmpty(NugetManagedCacheFolder), o => 
+                          o.SetPackageDirectory(NugetManagedCacheFolder)));
         });
 
-    Target CompileSolution => _ => _
+    Target CompileManaged => _ => _
         .After(Restore)
         .Executes(() =>
         {
-            RootDirectory.GlobFiles(
-                "src/**/*.csproj",
-                "test/**/*.Tests.csproj",
-                "test/benchmarks/**/*.csproj")
-            .Where(path => !path.ToString().Contains("Datadog.Trace.Tools.Runner"))
-            .ForEach(project => {
-                DotNetBuild(config => config
-                    .SetProjectFile(project)
-                    .SetTargetPlatform(Platform)
-                    .SetConfiguration(Configuration)
-                    .SetProcessEnvironmentVariable("DD_SERVICE_NAME", "dd-tracer-dotnet"));
-            });
+            DotNetBuild(config => config
+                         .SetProjectFile(Solution)
+                         .SetTargetPlatform(Platform)
+                         .SetConfiguration(Configuration)
+                        .SetNoRestore(true)
+                         .SetDDEnvironmentVariables());
         });
 
     Target CompileIntegrationTests => _ => _
@@ -161,7 +162,7 @@ class Build : NukeBuild
         });
 
     Target UnitTest => _ => _
-        .After(CompileSolution)
+        .After(CompileManaged)
         .Executes(() =>
         {
             RootDirectory.GlobFiles("test/**/*.Tests.csproj")
