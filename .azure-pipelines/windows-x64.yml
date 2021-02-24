@@ -13,7 +13,7 @@
 variables:
   buildConfiguration: Release
   dotnetCoreSdkVersion: 3.1.107
-  dotnetCoreSdk5Version: 5.0.100
+  dotnetCoreSdk5Version: 5.0.x
   ddApiKey: $(DD_API_KEY)
   DD_DOTNET_TRACER_MSBUILD:
   nugetNativeCacheFolder: $(System.DefaultWorkingDirectory)/packages
@@ -226,10 +226,10 @@ stages:
               version: 3.0.x
 
           - task: UseDotNet@2
-            displayName: Dotnet Core Sdk 3.1
+            displayName: Dotnet Core Runtime 3.3
             inputs:
-              packageType: sdk
-              version: $(dotnetCoreSdkVersion)
+              packageType: runtime
+              version: 3.1.x
 
           - task: UseDotNet@2
             displayName: Dotnet Sdk 5.0
@@ -244,7 +244,7 @@ stages:
             script: ./build.ps1 Restore --NugetManagedCacheFolder=$(nugetManagedCacheFolder)
 
           - displayName: Build managed
-            script: ./build.ps1 CompileManaged --Configuration=$(buildConfiguration)
+            script: ./build.ps1 Compile --Configuration=$(buildConfiguration) --
 
           - task: DotNetCoreCLI@2
             displayName: Build

@@ -36,8 +36,8 @@ class Build : NukeBuild
     [Parameter("Configuration to build - Default is 'Debug' (local) or 'Release' (server)")]
     readonly Configuration Configuration = IsLocalBuild ? Configuration.Debug : Configuration.Release;
 
-    [Parameter("Platform to build - x86 or x64. Default is unspecified")]
-    readonly MSBuildTargetPlatform Platform;
+    [Parameter("Platform to build - x86 or x64. Default is x64")]
+    readonly MSBuildTargetPlatform Platform = MSBuildTargetPlatform.x64;
 
     [Parameter("The location to publish the build output. Default is ./src/bin/managed-publish ")]
     readonly AbsolutePath PublishOutput;
@@ -60,7 +60,6 @@ class Build : NukeBuild
     Project ManagedLoaderProject => Solution.GetProject("Datadog.Trace.ClrProfiler.Managed.Loader");
 
     Target Clean => _ => _
-        .Before(Restore)
         .Executes(() =>
         {
             SourceDirectory.GlobDirectories("**/bin", "**/obj").ForEach(DeleteDirectory);
@@ -68,22 +67,35 @@ class Build : NukeBuild
             EnsureCleanDirectory(PublishOutputPath);
         });
 
-    Target Restore => _ => _
+    Target RestoreNuGet => _ => _
+        .After(Clean)
         .Executes(() =>
         {
             NuGetTasks.NuGetRestore(s => s
                 .SetTargetPath(Solution)
                 .SetVerbosity(NuGetVerbosity.Normal));
-
+        });
+ 
+    Target RestoreDotNet => _ => _
+        .After(Clean)
+        .Executes(() =>
+        {
             DotNetRestore(s => s
                 .SetProjectFile(Solution)
                 .SetVerbosity(DotNetVerbosity.Normal)
+                .SetTargetPlatform(Platform)
+                .SetProperty("configuration", Configuration.ToString())
                 .SetNoWarnDotNetCore3()
                 .When(!string.IsNullOrEmpty(NugetManagedCacheFolder), o => 
                           o.SetPackageDirectory(NugetManagedCacheFolder)));
         });
 
-    Target CompileManaged => _ => _
+    Target Restore => _ => _
+        .After(Clean)
+        .DependsOn(RestoreNuGet)
+        .DependsOn(RestoreDotNet);
+
+    Target Compile => _ => _
         .After(Restore)
         .Executes(() =>
         {
@@ -91,7 +103,8 @@ class Build : NukeBuild
                          .SetProjectFile(Solution)
                          .SetTargetPlatform(Platform)
                          .SetConfiguration(Configuration)
-                        .SetNoRestore(true)
+                         .SetNoRestore(true)
+                         .SetNoWarnDotNetCore3()
                          .SetDDEnvironmentVariables());
         });
 
@@ -162,7 +175,7 @@ class Build : NukeBuild
         });
 
     Target UnitTest => _ => _
-        .After(CompileManaged)
+        .After(Compile)
         .Executes(() =>
         {
             RootDirectory.GlobFiles("test/**/*.Tests.csproj")
@@ -285,6 +298,11 @@ class Build : NukeBuild
         .DependsOn(CompileSamples)
         .DependsOn(IntegrationTests)
         .DependsOn(ClrProfilerIntegrationTests);
+
+    Target CleanBuild => _ =>
+        _.DependsOn(Clean)
+         .DependsOn(Restore)
+         .DependsOn(Compile);
         
     /// <summary>  
     /// Run the default build 

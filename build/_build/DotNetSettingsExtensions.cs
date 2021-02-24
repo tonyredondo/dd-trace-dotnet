@@ -1,3 +1,4 @@
+using Nuke.Common.Tooling;
 using Nuke.Common.Tools.DotNet;
 using Nuke.Common.Tools.MSBuild;
 
@@ -15,5 +16,25 @@ internal static class DotNetSettingsExtensions
         return platform is null
             ? settings
             : settings.SetProperty("Platform", platform);
+    }
+
+    public static DotNetRestoreSettings SetTargetPlatform(this DotNetRestoreSettings settings, MSBuildTargetPlatform platform)
+    {
+        return platform is null
+            ? settings
+            : settings.SetProperty("Platform", platform);
+    }
+
+    public static T SetNoWarnDotNetCore3<T>(this T settings)
+        where T: ToolSettings
+    {
+        return settings.SetProcessArgumentConfigurator(
+            arg => arg.Add("/nowarn:netsdk1138"));
+    }
+    
+    public static T SetDDEnvironmentVariables<T>(this T settings)
+        where T: ToolSettings
+    {
+        return settings.SetProcessEnvironmentVariable("DD_SERVICE_NAME", "dd-tracer-dotnet");
     }
 }
