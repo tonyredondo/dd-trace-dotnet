@@ -191,7 +191,7 @@ class Build : NukeBuild
         });
 
     Target UnitTests => _ => _
-        .After(Compile)
+        .After(CompileSolution)
         .Executes(() =>
         {
             RootDirectory.GlobFiles("test/**/*.Tests.csproj")
@@ -312,7 +312,7 @@ class Build : NukeBuild
     Target CleanBuild => _ =>
         _.DependsOn(Clean)
          .DependsOn(Restore)
-         .DependsOn(Compile);
+         .DependsOn(CompileSolution);
         
     /// <summary>  
     /// Run the default build 
