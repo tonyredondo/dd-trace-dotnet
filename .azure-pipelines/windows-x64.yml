@@ -99,7 +99,7 @@ stages:
           - task: NuGetToolInstaller@1
             displayName: Nuget Install
 
-          - script: ./build.ps1 Restore --NugetManagedCacheFolder $(nugetManagedCacheFolder)
+          - script: ./build.ps1 Restore --NugetManagedCacheFolder "$(nugetManagedCacheFolder)"
             displayName: Restore
 
           - script: ./build.ps1 CompileSolution --Configuration $(buildConfiguration) --Platform $(buildPlatform)
