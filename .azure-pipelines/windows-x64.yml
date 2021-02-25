@@ -99,22 +99,22 @@ stages:
           - task: NuGetToolInstaller@1
             displayName: Nuget Install
 
-          - script: ./build.ps1 Restore --NugetManagedCacheFolder "$(nugetManagedCacheFolder)"
+          - script: build.cmd Restore --NugetManagedCacheFolder "$(nugetManagedCacheFolder)"
             displayName: Restore
 
-          - script: ./build.ps1 CompileSolution --Configuration $(buildConfiguration) --Platform $(buildPlatform)
+          - script: build.cmd CompileSolution --Configuration $(buildConfiguration) --Platform $(buildPlatform)
             displayName: Build managed
 
-          - script: ./build.ps1 CompileNative --Configuration $(buildConfiguration) --Platform $(buildPlatform)
+          - script: build.cmd CompileNative --Configuration $(buildConfiguration) --Platform $(buildPlatform)
             displayName: Build native
 
-          - script: ./build.ps1 CompileFrameworkReproductions --Configuration $(buildConfiguration) --Platform $(buildPlatform)
+          - script: build.cmd CompileFrameworkReproductions --Configuration $(buildConfiguration) --Platform $(buildPlatform)
             displayName: Build Framework Reproductions
 
-          - script: ./build.ps1 CompileIntegrationTests --Configuration $(buildConfiguration) --Platform $(buildPlatform) --ManagedProfilerOutputDirectory "$(tracerHome)"
+          - script: build.cmd CompileIntegrationTests --Configuration $(buildConfiguration) --Platform $(buildPlatform) --ManagedProfilerOutputDirectory "$(tracerHome)"
             displayName: Build Integration Tests
 
-          - script: ./build.ps1 CompileSamples --Configuration $(buildConfiguration) --Platform $(buildPlatform) --ManagedProfilerOutputDirectory "$(tracerHome)"
+          - script: build.cmd CompileSamples --Configuration $(buildConfiguration) --Platform $(buildPlatform) --ManagedProfilerOutputDirectory "$(tracerHome)"
             displayName: Build Samples
 
           - publish: $(System.DefaultWorkingDirectory)
@@ -174,13 +174,13 @@ stages:
           - task: NuGetToolInstaller@1
             displayName: install nuget
 
-          - script: ./build.ps1 CompileManagedLoader --Configuration $(buildConfiguration) --Platform $(buildPlatform)
+          - script: build.cmd CompileManagedLoader --Configuration $(buildConfiguration) --Platform $(buildPlatform)
             displayName: Build managed loader
 
-          - script: ./build.ps1 RestoreNative --Configuration $(buildConfiguration) --Platform $(buildPlatform)
+          - script: build.cmd RestoreNative --Configuration $(buildConfiguration) --Platform $(buildPlatform)
             displayName: Restore native solution
 
-          - script: ./build.ps1 CompileNative --Configuration $(buildConfiguration) --Platform $(buildPlatform)
+          - script: build.cmd CompileNative --Configuration $(buildConfiguration) --Platform $(buildPlatform)
             displayName: Build native
 
           - publish: $(System.DefaultWorkingDirectory)
@@ -268,7 +268,7 @@ stages:
               packageType: sdk
               version: $(dotnetCoreSdk5Version)
 
-          - script: ./build.ps1 UnitTests --Configuration $(buildConfiguration) --Platform $(buildPlatform)
+          - script: build.cmd UnitTests --Configuration $(buildConfiguration) --Platform $(buildPlatform)
             displayName: Run unit tests
 
 
