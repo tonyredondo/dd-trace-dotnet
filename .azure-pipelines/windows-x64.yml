@@ -99,23 +99,23 @@ stages:
           - task: NuGetToolInstaller@1
             displayName: Nuget Install
 
-          - displayName: Restore
-            script: ./build.ps1 Restore --NugetManagedCacheFolder $(nugetManagedCacheFolder)
+          - script: Restore
+            displayName: ./build.ps1 Restore --NugetManagedCacheFolder $(nugetManagedCacheFolder)
 
-          - displayName: Build managed
-            script: ./build.ps1 CompileSolution --Configuration $(buildConfiguration) --Platform $(buildPlatform)
+          - script: Build managed
+            displayName: ./build.ps1 CompileSolution --Configuration $(buildConfiguration) --Platform $(buildPlatform)
 
-          - displayName: Build native
-            script: ./build.ps1 CompileNative --Configuration $(buildConfiguration) --Platform $(buildPlatform)
+          - script: Build native
+            displayName: ./build.ps1 CompileNative --Configuration $(buildConfiguration) --Platform $(buildPlatform)
 
-          - displayName: Build Framework Reproductions
-            script: ./build.ps1 CompileFrameworkReproductions --Configuration $(buildConfiguration) --Platform $(buildPlatform)
+          - script: Build Framework Reproductions
+            displayName: ./build.ps1 CompileFrameworkReproductions --Configuration $(buildConfiguration) --Platform $(buildPlatform)
 
-          - displayName: Build Integration Tests
-            script: ./build.ps1 CompileIntegrationTests --Configuration $(buildConfiguration) --Platform $(buildPlatform) --ManagedProfilerOutputDirectory "$(tracerHome)"
+          - script: Build Integration Tests
+            displayName: ./build.ps1 CompileIntegrationTests --Configuration $(buildConfiguration) --Platform $(buildPlatform) --ManagedProfilerOutputDirectory "$(tracerHome)"
 
-          - displayName: Build Samples
-            script: ./build.ps1 CompileSamples --Configuration $(buildConfiguration) --Platform $(buildPlatform) --ManagedProfilerOutputDirectory "$(tracerHome)"
+          - script: Build Samples
+            displayName: ./build.ps1 CompileSamples --Configuration $(buildConfiguration) --Platform $(buildPlatform) --ManagedProfilerOutputDirectory "$(tracerHome)"
 
           - publish: $(System.DefaultWorkingDirectory)
             artifact: source-build-$(buildPlatform)
@@ -174,14 +174,14 @@ stages:
           - task: NuGetToolInstaller@1
             displayName: install nuget
 
-          - displayName: Build managed loader
-            script: ./build.ps1 CompileManagedLoader --Configuration $(buildConfiguration) --Platform $(buildPlatform)
+          - script: Build managed loader
+            displayName: ./build.ps1 CompileManagedLoader --Configuration $(buildConfiguration) --Platform $(buildPlatform)
 
-          - displayName: Restore native solution
-            script: ./build.ps1 RestoreNative --Configuration $(buildConfiguration) --Platform $(buildPlatform)
+          - script: Restore native solution
+            displayName: ./build.ps1 RestoreNative --Configuration $(buildConfiguration) --Platform $(buildPlatform)
 
-          - displayName: Build native
-            script: ./build.ps1 CompileNative --Configuration $(buildConfiguration) --Platform $(buildPlatform)
+          - script: Build native
+            displayName: ./build.ps1 CompileNative --Configuration $(buildConfiguration) --Platform $(buildPlatform)
 
           - publish: $(System.DefaultWorkingDirectory)
             artifact: source-native-restore
@@ -268,8 +268,8 @@ stages:
               packageType: sdk
               version: $(dotnetCoreSdk5Version)
 
-          - displayName: Run unit tests
-            script: ./build.ps1 UnitTests --Configuration $(buildConfiguration) --Platform $(buildPlatform)
+          - script: Run unit tests
+            displayName: ./build.ps1 UnitTests --Configuration $(buildConfiguration) --Platform $(buildPlatform)
 
 
   # managed integration tests stage
