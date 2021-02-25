@@ -13,7 +13,7 @@
 variables:
   buildConfiguration: Release
   dotnetCoreSdkVersion: 3.1.107
-  dotnetCoreSdk5Version: 5.0.x
+  dotnetCoreSdk5Version: 5.0.103
   ddApiKey: $(DD_API_KEY)
   DD_DOTNET_TRACER_MSBUILD:
   nugetNativeCacheFolder: $(System.DefaultWorkingDirectory)/packages
@@ -85,148 +85,7 @@ stages:
               version: 3.0.x
 
           - task: UseDotNet@2
-            displayName: Dotnet Core Sdk 3.1
-            inputs:
-              packageType: sdk
-              version: $(dotnetCoreSdkVersion)
-
-          - task: UseDotNet@2
-            displayName: Dotnet Sdk 5.0
-            inputs:
-              packageType: sdk
-              version: $(dotnetCoreSdk5Version)
-
-          - task: DotNetCoreCLI@2
-            displayName: Restore
-            inputs:
-              command: restore
-              projects: |
-                **/*.csproj
-                !src/Datadog.Trace.Tools.Runner/*.csproj
-                !test/test-applications/regression/**/ExpenseItDemo*.csproj
-                !test/test-applications/regression/**/EntityFramework6x*.csproj
-                !test/test-applications/regression/**/StackExchange.Redis.AssemblyConflict.LegacyProject.csproj
-              restoreDirectory: $(nugetManagedCacheFolder)
-              verbosityRestore: Normal
-
-          - task: DotNetCoreCLI@2
-            displayName: Build
-            inputs:
-              command: build
-              configuration: $(buildConfiguration)
-              arguments: --no-restore /nowarn:netsdk1138 #-l:DatadogLogger,"$(DD_DOTNET_TRACER_MSBUILD)"
-              projects: |
-                src/**/*.csproj
-                test/**/*.Tests.csproj
-                benchmarks/**/*.csproj
-                !src/Datadog.Trace.Tools.Runner/*.csproj
-            env:
-              DD_SERVICE_NAME: dd-tracer-dotnet
-
-          - task: NuGetToolInstaller@1
-            displayName: Nuget Install
-
-          - task: NuGetCommand@2
-            displayName: Nuget Restore
-            inputs:
-              restoreSolution: Datadog.Trace.sln
-              verbosityRestore: Normal
-
-          - task: MSBuild@1
-            displayName: MsBuild BuildCppTests
-            inputs:
-              solution: Datadog.Trace.proj
-              platform: $(buildPlatform)
-              configuration: $(buildConfiguration)
-              msbuildArguments: /t:BuildCpp;BuildCppTests
-              maximumCpuCount: true
-
-          - task: MSBuild@1
-            displayName: MsBuild Framework Reproductions
-            inputs:
-              solution: Datadog.Trace.proj
-              platform: $(buildPlatform)
-              configuration: $(buildConfiguration)
-              msbuildArguments: /t:BuildFrameworkReproductions
-              maximumCpuCount: true
-
-          - task: DotNetCoreCLI@2
-            displayName: Build Integration Tests
-            inputs:
-              command: build
-              projects: |
-                test/test-applications/regression/**/*.csproj
-                test/*.IntegrationTests/*.IntegrationTests.csproj
-                !test/test-applications/regression/**/ExpenseItDemo*.csproj
-                !test/test-applications/regression/**/EntityFramework6x*.csproj
-                !test/test-applications/regression/**/StackExchange.Redis.AssemblyConflict.LegacyProject.csproj
-              arguments: --configuration $(buildConfiguration) -p:Platform=$(buildPlatform) -p:ManagedProfilerOutputDirectory=$(tracerHome) /nowarn:netsdk1138
-
-          - task: DotNetCoreCLI@2
-            displayName: Build Samples
-            inputs:
-              command: build
-              projects: |
-                test/test-applications/integrations/**/*.csproj
-                !test/test-applications/integrations/dependency-libs/**/*.csproj
-              arguments: --configuration $(buildConfiguration) -p:Platform=$(buildPlatform) -p:ManagedProfilerOutputDirectory=$(tracerHome) -p:BuildInParallel=false /nowarn:netsdk1138
-
-          - publish: $(System.DefaultWorkingDirectory)
-            artifact: source-build-$(buildPlatform)
-            condition: succeededOrFailed()
-
-  - stage: nuke_test
-    dependsOn: []
-    jobs:
-      - job: build
-        timeoutInMinutes: 120
-        strategy:
-          matrix:
-            x64:
-              buildPlatform: x64
-            x86:
-              buildPlatform: x86
-        pool:
-          vmImage: windows-2019
-        variables:
-          tracerHomeName: windows-tracer-home
-          tracerHome: $(System.DefaultWorkingDirectory)/src/bin/$(tracerHomeName)
-          msiHome: $(System.DefaultWorkingDirectory)/src/bin/msi
-
-        steps:
-
-          - task: Cache@2
-            inputs:
-              key: 'nuget_native | "$(Agent.OS)" | "$(buildPlatform)" | **/*.csproj | Datadog.Trace.sln '
-              path: $(nugetNativeCacheFolder)
-            displayName: Native Nuget Cache
-
-          - task: Cache@2
-            inputs:
-              key: 'nuget_managed | "$(Agent.OS)" | "$(buildPlatform)" | **/*.csproj'
-              path: $(nugetManagedCacheFolder)
-            displayName: Managed Nuget Cache
-
-          - task: Cache@2
-            inputs:
-              key: 'dotnet_cache | "$(Agent.OS)"'
-              path: $(dotnetCache)
-            displayName: Dotnet Cache
-
-          - task: UseDotNet@2
-            displayName: Dotnet Core Runtime 2.1
-            inputs:
-              packageType: runtime
-              version: 2.1.x
-
-          - task: UseDotNet@2
-            displayName: Dotnet Core Runtime 3.0
-            inputs:
-              packageType: runtime
-              version: 3.0.x
-
-          - task: UseDotNet@2
-            displayName: Dotnet Core Runtime 3.3
+            displayName: Dotnet Core Runtime 3.1
             inputs:
               packageType: runtime
               version: 3.1.x
@@ -241,70 +100,26 @@ stages:
             displayName: Nuget Install
 
           - displayName: Restore
-            script: ./build.ps1 Restore --NugetManagedCacheFolder=$(nugetManagedCacheFolder)
+            script: ./build.ps1 Restore --NugetManagedCacheFolder $(nugetManagedCacheFolder)
 
           - displayName: Build managed
-            script: ./build.ps1 Compile --Configuration=$(buildConfiguration) --
+            script: ./build.ps1 CompileSolution --Configuration $(buildConfiguration) --Platform $(buildPlatform)
 
-          - task: DotNetCoreCLI@2
-            displayName: Build
-            inputs:
-              command: build
-              configuration: $(buildConfiguration)
-              arguments: --no-restore /nowarn:netsdk1138 #-l:DatadogLogger,"$(DD_DOTNET_TRACER_MSBUILD)"
-              projects: |
-                src/**/*.csproj
-                test/**/*.Tests.csproj
-                benchmarks/**/*.csproj
-                !src/Datadog.Trace.Tools.Runner/*.csproj
-            env:
-              DD_SERVICE_NAME: dd-tracer-dotnet
+          - displayName: Build native
+            script: ./build.ps1 CompileNative --Configuration $(buildConfiguration) --Platform $(buildPlatform)
 
-          - task: MSBuild@1
-            displayName: MsBuild BuildCppTests
-            inputs:
-              solution: Datadog.Trace.proj
-              platform: $(buildPlatform)
-              configuration: $(buildConfiguration)
-              msbuildArguments: /t:BuildCpp;BuildCppTests
-              maximumCpuCount: true
+          - displayName: Build Framework Reproductions
+            script: ./build.ps1 CompileFrameworkReproductions --Configuration $(buildConfiguration) --Platform $(buildPlatform)
 
-          - task: MSBuild@1
-            displayName: MsBuild Framework Reproductions
-            inputs:
-              solution: Datadog.Trace.proj
-              platform: $(buildPlatform)
-              configuration: $(buildConfiguration)
-              msbuildArguments: /t:BuildFrameworkReproductions
-              maximumCpuCount: true
+          - displayName: Build Integration Tests
+            script: ./build.ps1 CompileIntegrationTests --Configuration $(buildConfiguration) --Platform $(buildPlatform) --ManagedProfilerOutputDirectory "$(tracerHome)"
 
-          - task: DotNetCoreCLI@2
-            displayName: Build Integration Tests
-            inputs:
-              command: build
-              projects: |
-                test/test-applications/regression/**/*.csproj
-                test/*.IntegrationTests/*.IntegrationTests.csproj
-                !test/test-applications/regression/**/ExpenseItDemo*.csproj
-                !test/test-applications/regression/**/EntityFramework6x*.csproj
-                !test/test-applications/regression/**/StackExchange.Redis.AssemblyConflict.LegacyProject.csproj
-              arguments: --configuration $(buildConfiguration) -p:Platform=$(buildPlatform) -p:ManagedProfilerOutputDirectory=$(tracerHome) /nowarn:netsdk1138
-
-          - task: DotNetCoreCLI@2
-            displayName: Build Samples
-            inputs:
-              command: build
-              projects: |
-                test/test-applications/integrations/**/*.csproj
-                !test/test-applications/integrations/dependency-libs/**/*.csproj
-              arguments: --configuration $(buildConfiguration) -p:Platform=$(buildPlatform) -p:ManagedProfilerOutputDirectory=$(tracerHome) -p:BuildInParallel=false /nowarn:netsdk1138
+          - displayName: Build Samples
+            script: ./build.ps1 CompileSamples --Configuration $(buildConfiguration) --Platform $(buildPlatform) --ManagedProfilerOutputDirectory "$(tracerHome)"
 
           - publish: $(System.DefaultWorkingDirectory)
             artifact: source-build-$(buildPlatform)
             condition: succeededOrFailed()
-
-
-
 
   # native build stage
   - stage: native_build
@@ -345,7 +160,7 @@ stages:
               version: 3.0.x
 
           - task: UseDotNet@2
-            displayName: install dotnet core sdk 3.1
+            displayName: install dotnet core runtime 3.1
             inputs:
               packageType: sdk
               version: $(dotnetCoreSdkVersion)
@@ -356,36 +171,20 @@ stages:
               packageType: sdk
               version: $(dotnetCoreSdk5Version)
 
-          - task: DotNetCoreCLI@2
-            displayName: dotnet build
-            inputs:
-              command: build
-              configuration: $(buildConfiguration)
-              arguments: /nowarn:netsdk1138
-              projects: |
-                src/Datadog.Trace.ClrProfiler.Managed.Loader/Datadog.Trace.ClrProfiler.Managed.Loader.csproj
           - task: NuGetToolInstaller@1
             displayName: install nuget
 
-          - task: NuGetCommand@2
-            displayName: nuget restore
-            inputs:
-              restoreSolution: Datadog.Trace.Native.sln
-              verbosityRestore: Detailed
+          - displayName: Build managed loader
+            script: ./build.ps1 CompileManagedLoader --Configuration $(buildConfiguration) --Platform $(buildPlatform)
 
-          - task: MSBuild@1
-            displayName: msbuild
-            inputs:
-              solution: Datadog.Trace.proj
-              platform: $(buildPlatform)
-              configuration: $(buildConfiguration)
-              msbuildArguments: /t:BuildCpp;BuildCppTests
-              maximumCpuCount: true
+          - displayName: Restore native solution
+            script: ./build.ps1 RestoreNative --Configuration $(buildConfiguration) --Platform $(buildPlatform)
+
+          - displayName: Build native
+            script: ./build.ps1 CompileNative --Configuration $(buildConfiguration) --Platform $(buildPlatform)
 
           - publish: $(System.DefaultWorkingDirectory)
             artifact: source-native-restore
-
-
 
   - stage: native_unit_tests
     dependsOn: native_build
@@ -402,6 +201,7 @@ stages:
               artifact: source-native-restore
               path: $(System.DefaultWorkingDirectory)
 
+          # Todo: move to Nuke
           - script: Datadog.Trace.ClrProfiler.Native.Tests.exe --gtest_output=xml
             displayName: run tests
             workingDirectory: $(System.DefaultWorkingDirectory)/test/Datadog.Trace.ClrProfiler.Native.Tests/bin/$(buildConfiguration)/$(buildPlatform)
@@ -414,93 +214,17 @@ stages:
               buildConfiguration: $(buildConfiguration)
             condition: succeededOrFailed()
 
-
-
-  # managed build stage
-  - stage: managed_build
-    dependsOn: []
-    jobs:
-      - job: build
-        pool:
-          vmImage: windows-2019
-        steps:
-
-          - task: Cache@2
-            inputs:
-              key: 'nuget_managed | "$(Agent.OS)" | src/**/*.csproj'
-              restoreKeys: |
-                nuget_managed | "$(Agent.OS)"
-                nuget_managed
-              path: $(nugetManagedCacheFolder)
-            displayName: Cache Nuget packages
-
-          - task: Cache@2
-            inputs:
-              key: 'dotnet_cache | "$(Agent.OS)"'
-              restoreKeys: |
-                dotnet_cache
-              path: $(dotnetCache)
-            displayName: Cache Dotnet
-
-          - task: UseDotNet@2
-            displayName: install dotnet core runtime 2.1
-            inputs:
-              packageType: runtime
-              version: 2.1.x
-
-          - task: UseDotNet@2
-            displayName: install dotnet core runtime 3.0
-            inputs:
-              packageType: runtime
-              version: 3.0.x
-
-          - task: UseDotNet@2
-            displayName: install dotnet core sdk 3.1
-            inputs:
-              packageType: sdk
-              version: $(dotnetCoreSdkVersion)
-
-          - task: UseDotNet@2
-            displayName: install dotnet core sdk 5.0
-            inputs:
-              packageType: sdk
-              version: $(dotnetCoreSdk5Version)
-
-          - task: DotNetCoreCLI@2
-            displayName: dotnet restore
-            inputs:
-              command: restore
-              projects: |
-                src/**/*.csproj
-                test/**/*.Tests.csproj
-                benchmarks/**/*.csproj
-              restoreDirectory: $(nugetManagedCacheFolder)
-              verbosityRestore: Normal
-
-          - task: DotNetCoreCLI@2
-            displayName: dotnet build
-            inputs:
-              command: build
-              configuration: $(buildConfiguration)
-              arguments: --no-restore /nowarn:netsdk1138 #-l:DatadogLogger,"$(DD_DOTNET_TRACER_MSBUILD)"
-              projects: |
-                src/**/*.csproj
-                test/**/*.Tests.csproj
-                benchmarks/**/*.csproj
-                !src/Datadog.Trace.Tools.Runner/*.csproj
-            env:
-              DD_SERVICE_NAME: dd-tracer-dotnet
-
-          - publish: $(System.DefaultWorkingDirectory)
-            artifact: source-managed-restore
-
-
-
   # managed unit tests stage
   - stage: managed_unit_tests
-    dependsOn: managed_build
+    dependsOn: build
     jobs:
       - job: unit_tests
+        strategy:
+          matrix:
+            x64:
+              buildPlatform: x64
+            x86:
+              buildPlatform: x86
         pool:
           vmImage: windows-2019
         steps:
@@ -509,7 +233,7 @@ stages:
 
           - task: DownloadPipelineArtifact@2
             inputs:
-              artifact: source-managed-restore
+              artifact: source-build-$(buildPlatform)
               path: $(System.DefaultWorkingDirectory)
 
           - task: Cache@2
@@ -533,10 +257,10 @@ stages:
               version: 3.0.x
 
           - task: UseDotNet@2
-            displayName: install dotnet core sdk 3.1
+            displayName: install dotnet core runtime 3.1
             inputs:
-              packageType: sdk
-              version: $(dotnetCoreSdkVersion)
+              packageType: runtime
+              version: 3.1.x
 
           - task: UseDotNet@2
             displayName: install dotnet core sdk 5.0
@@ -544,21 +268,13 @@ stages:
               packageType: sdk
               version: $(dotnetCoreSdk5Version)
 
-          - task: DotNetCoreCLI@2
-            displayName: dotnet test
-            inputs:
-              command: test
-              configuration: $(buildConfiguration)
-              arguments: --no-build --no-restore
-              projects: test/**/*.Tests.csproj
-            env:
-              DD_SERVICE_NAME: dd-tracer-dotnet
-
+          - displayName: Run unit tests
+            script: ./build.ps1 UnitTests --Configuration $(buildConfiguration) --Platform $(buildPlatform)
 
 
   # managed integration tests stage
-  - stage: managed_integration_tests
-    dependsOn: managed_build
+  - stage: integration_tests
+    dependsOn: build
     jobs:
       - job: windows
         pool:
@@ -572,8 +288,8 @@ stages:
 
 
   # managed benchmark tests stage
-  - stage: managed_benchmark_tests
-    dependsOn: managed_build
+  - stage: benchmark_tests
+    dependsOn: build
     jobs:
       - job: benchmarks
         pool:

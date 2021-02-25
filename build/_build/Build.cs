@@ -75,6 +75,15 @@ class Build : NukeBuild
                 .SetTargetPath(Solution)
                 .SetVerbosity(NuGetVerbosity.Normal));
         });
+
+    Target RestoreNative => _ => _
+        .After(Clean)
+        .Executes(() =>
+        {
+            NuGetTasks.NuGetRestore(s => s
+                .SetTargetPath(NativeSolution)
+                .SetVerbosity(NuGetVerbosity.Detailed));
+        });
  
     Target RestoreDotNet => _ => _
         .After(Clean)
@@ -87,7 +96,7 @@ class Build : NukeBuild
                 .SetProperty("configuration", Configuration.ToString())
                 .SetNoWarnDotNetCore3()
                 .When(!string.IsNullOrEmpty(NugetManagedCacheFolder), o => 
-                          o.SetPackageDirectory(NugetManagedCacheFolder)));
+                        o.SetPackageDirectory(NugetManagedCacheFolder)));
         });
 
     Target Restore => _ => _
@@ -95,17 +104,24 @@ class Build : NukeBuild
         .DependsOn(RestoreNuGet)
         .DependsOn(RestoreDotNet);
 
-    Target Compile => _ => _
+    Target CompileSolution => _ => _
         .After(Restore)
         .Executes(() =>
         {
-            DotNetBuild(config => config
-                         .SetProjectFile(Solution)
-                         .SetTargetPlatform(Platform)
-                         .SetConfiguration(Configuration)
-                         .SetNoRestore(true)
-                         .SetNoWarnDotNetCore3()
-                         .SetDDEnvironmentVariables());
+            RootDirectory.GlobFiles(
+                "src/**/*.csproj",
+                "test/**/*.Tests.csproj",
+                "test/benchmarks/**/*.csproj")
+            .Where(path => !path.ToString().Contains("Datadog.Trace.Tools.Runner"))
+            .ForEach(project => {
+                DotNetBuild(config => config
+                    .SetNoRestore(true)
+                    .SetProjectFile(project)
+                    .SetTargetPlatform(Platform)
+                    .SetConfiguration(Configuration)
+                    .SetNoWarnDotNetCore3()
+                    .SetDDEnvironmentVariables());
+            });
         });
 
     Target CompileIntegrationTests => _ => _
@@ -156,8 +172,8 @@ class Build : NukeBuild
             DotNetBuild(config => config
                 .SetProjectFile(ManagedLoaderProject)
                 .SetTargetPlatform(Platform)
-                .SetConfiguration(Configuration));
-            // Need to add: /nowarn:netsdk1138
+                .SetConfiguration(Configuration)
+                .SetNoWarnDotNetCore3());
         });
 
     Target PublishManagedLoader => _ => _
@@ -174,17 +190,19 @@ class Build : NukeBuild
                     .SetFramework(framework)));
         });
 
-    Target UnitTest => _ => _
+    Target UnitTests => _ => _
         .After(Compile)
         .Executes(() =>
         {
             RootDirectory.GlobFiles("test/**/*.Tests.csproj")
             .ForEach(project => {
                 DotNetTest(x => x
-                    .SetProjectFile(Solution)
+                    .SetNoRestore(true)
+                    .SetNoBuild(true)
+                    .SetProjectFile(project)
                     .SetTargetPlatform(Platform)
                     .SetConfiguration(Configuration)
-                    .SetProcessEnvironmentVariable("DD_SERVICE_NAME", "dd-tracer-dotnet"));
+                    .SetDDEnvironmentVariables());
             });
         });
     
@@ -225,14 +243,6 @@ class Build : NukeBuild
                 .SetFilter("(RunOnWindows=True|Category=Smoke)&LoadFromGAC!=True&IIS!=True"));
         });
 
-    Target RestoreNative => _ => _
-        .Executes(() =>
-        {
-            NuGetTasks.NuGetRestore(s => s
-                .SetTargetPath(NativeSolution)
-                .SetVerbosity(NuGetVerbosity.Normal));
-        });
-
     Target CompileNative => _ => _
         .Executes(() =>
         {
@@ -241,7 +251,7 @@ class Build : NukeBuild
                 .SetConfiguration(Configuration)
                 .SetTargetPlatform(Platform)
                 .SetTargets("BuildCpp", "BuildCppTests")
-                // /nowarn:netsdk1138
+                .SetNoWarnDotNetCore3()
                 .SetMaxCpuCount(null));
         });
 
@@ -262,7 +272,7 @@ class Build : NukeBuild
                 .SetMaxCpuCount(null));
         });
 
-    Target BuildFrameworkReproductions => _ => _
+    Target CompileFrameworkReproductions => _ => _
         .After(Restore)
         .Requires(() => PublishOutputPath != null)
         .Executes(() =>
@@ -293,7 +303,7 @@ class Build : NukeBuild
         .DependsOn(Clean)
         .DependsOn(Restore)
         .DependsOn(CompileTracerHome)
-        .DependsOn(BuildFrameworkReproductions)
+        .DependsOn(CompileFrameworkReproductions)
         .DependsOn(CompileIntegrationTests)
         .DependsOn(CompileSamples)
         .DependsOn(IntegrationTests)
