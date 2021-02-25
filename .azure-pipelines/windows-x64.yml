@@ -126,6 +126,12 @@ stages:
     dependsOn: []
     jobs:
       - job: build
+        strategy:
+          matrix:
+            x64:
+              buildPlatform: x64
+            x86:
+              buildPlatform: x86
         pool:
           vmImage: windows-2019
         steps:
@@ -184,12 +190,18 @@ stages:
             displayName: Build native
 
           - publish: $(System.DefaultWorkingDirectory)
-            artifact: source-native-restore
+            artifact: source-native-restore-$(buildPlatform)
 
   - stage: native_unit_tests
     dependsOn: native_build
     jobs:
       - job: unit_tests
+        strategy:
+          matrix:
+            x64:
+              buildPlatform: x64
+            x86:
+              buildPlatform: x86
         pool:
           vmImage: windows-2019
         steps:
@@ -198,7 +210,7 @@ stages:
 
           - task: DownloadPipelineArtifact@2
             inputs:
-              artifact: source-native-restore
+              artifact: source-native-restore-$(buildPlatform)
               path: $(System.DefaultWorkingDirectory)
 
           # Todo: move to Nuke
