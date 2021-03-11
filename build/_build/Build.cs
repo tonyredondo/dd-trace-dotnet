@@ -119,6 +119,7 @@ class Build : NukeBuild
                     .SetProjectFile(project)
                     .SetTargetPlatform(Platform)
                     .SetConfiguration(Configuration)
+                    .SetNoDependencies(true)
                     .SetNoWarnDotNetCore3()
                     .SetDDEnvironmentVariables());
             });
@@ -140,6 +141,7 @@ class Build : NukeBuild
                     .SetProjectFile(project)
                     .SetTargetPlatform(Platform)
                     .SetConfiguration(Configuration)
+                    .SetNoDependencies(true)
                     .SetProperty("ManagedProfilerOutputDirectory", PublishOutputPath));
                 // Need to add: /nowarn:netsdk1138
             });
@@ -158,6 +160,7 @@ class Build : NukeBuild
                     .SetProjectFile(project)
                     .SetTargetPlatform(Platform)
                     .SetConfiguration(Configuration)
+                    .SetNoDependencies(true)
                     .SetProperty("BuildInParallel", "false")
                     .SetProperty("ManagedProfilerOutputDirectory", PublishOutputPath));
                 // Need to add: /nowarn:netsdk1138
@@ -173,6 +176,7 @@ class Build : NukeBuild
                 .SetProjectFile(ManagedLoaderProject)
                 .SetTargetPlatform(Platform)
                 .SetConfiguration(Configuration)
+                .SetNoDependencies(true)
                 .SetNoWarnDotNetCore3());
         });
 
@@ -197,8 +201,8 @@ class Build : NukeBuild
             RootDirectory.GlobFiles("test/**/*.Tests.csproj")
             .ForEach(project => {
                 DotNetTest(x => x
-                    .SetNoRestore(true)
-                    .SetNoBuild(true)
+                    .EnableNoRestore()
+                    .EnableNoBuild()
                     .SetProjectFile(project)
                     .SetTargetPlatform(Platform)
                     .SetConfiguration(Configuration)
