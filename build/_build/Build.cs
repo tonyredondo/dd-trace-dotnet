@@ -59,6 +59,12 @@ class Build : NukeBuild
 
     Project ManagedLoaderProject => Solution.GetProject("Datadog.Trace.ClrProfiler.Managed.Loader");
 
+    IEnumerable<Project> NuGetPackages => new []
+    {
+        Solution.GetProject("Datadog.Trace"),
+        Solution.GetProject("Datadog.Trace.OpenTracing"),
+    };
+
     Target Clean => _ => _
         .Executes(() =>
         {
@@ -101,31 +107,23 @@ class Build : NukeBuild
 
     Target Restore => _ => _
         .After(Clean)
-        .DependsOn(RestoreNuGet)
-        .DependsOn(RestoreDotNet);
+        // .DependsOn(RestoreDotNet)
+        .DependsOn(RestoreNuGet);
 
     Target CompileSolution => _ => _
         .After(Restore)
         .Executes(() =>
         {
-            RootDirectory.GlobFiles(
-                "src/**/*.csproj",
-                "test/**/*.Tests.csproj",
-                "test/benchmarks/**/*.csproj")
-            .Where(path => !path.ToString().Contains("Datadog.Trace.Tools.Runner"))
-            .ForEach(project => {
-                DotNetBuild(config => config
-                    .SetNoRestore(true)
-                    .SetProjectFile(project)
-                    .SetTargetPlatform(Platform)
-                    .SetConfiguration(Configuration)
-                    .SetNoDependencies(true)
-                    .SetNoWarnDotNetCore3()
-                    .SetDDEnvironmentVariables());
-            });
+            // Always AnyCPU
+            MSBuild(x => x
+                .SetTargetPath(MsBuildProject)
+                .SetConfiguration(Configuration)
+                .SetTargets("BuildCsharp")
+            );
         });
 
     Target CompileIntegrationTests => _ => _
+        .After(CompileFrameworkReproductions)
         .After(CompileTracerHome)
         .Executes(() =>
         {
@@ -137,11 +135,15 @@ class Build : NukeBuild
                 && !path.ToString().Contains("ExpenseItDemo"))
             .ForEach(project => {
                 DotNetBuild(config => config
-                    .EnableNoRestore()
+                    // .EnableNoRestore()
                     .SetProjectFile(project)
-                    .SetTargetPlatform(Platform)
+                    // .SetTargetPlatform(Platform)
                     .SetConfiguration(Configuration)
-                    .SetNoDependencies(true)
+                    //.SetNoDependencies(true)
+                    .SetNoWarnDotNetCore3()
+                    .SetProperty("ExcludeManagedProfiler", true)
+                    .SetProperty("ExcludeNativeProfiler", true)
+                    .SetProperty("LoadManagedProfilerFromProfilerDirectory", false)
                     .SetProperty("ManagedProfilerOutputDirectory", PublishOutputPath));
                 // Need to add: /nowarn:netsdk1138
             });
@@ -156,14 +158,14 @@ class Build : NukeBuild
             .Where(path => !path.ToString().Contains("dependency-libs"))
             .ForEach(project => {
                 DotNetBuild(config => config
-                    .EnableNoRestore()
+                    // .EnableNoRestore()
                     .SetProjectFile(project)
                     .SetTargetPlatform(Platform)
                     .SetConfiguration(Configuration)
                     .SetNoDependencies(true)
+                    .SetNoWarnDotNetCore3()
                     .SetProperty("BuildInParallel", "false")
                     .SetProperty("ManagedProfilerOutputDirectory", PublishOutputPath));
-                // Need to add: /nowarn:netsdk1138
             });
         });
 
@@ -192,6 +194,18 @@ class Build : NukeBuild
                 .CombineWith(frameworks, (x, framework) => x
                     .SetOutput(PublishOutputPath / framework)
                     .SetFramework(framework)));
+        });
+
+    Target PackNuGet => _ => _
+        .After(CompileSolution)
+        .Executes(() =>
+        {
+            DotNetPack(s => s
+                .EnableNoRestore()
+                .EnableNoBuild()
+                .SetConfiguration(Configuration)
+                .CombineWith(NuGetPackages, (x, project) => x
+                    .SetProject(project)));
         });
 
     Target UnitTests => _ => _
@@ -248,17 +262,55 @@ class Build : NukeBuild
         });
 
     Target CompileNative => _ => _
+        .After(CompileSolution)
+        .Executes(() =>
+        {
+            // If we're building for x64, build for x86 too 
+            var platforms =
+                Equals(Platform, MSBuildTargetPlatform.x64)
+                    ? new[] { MSBuildTargetPlatform.x64, MSBuildTargetPlatform.x86 }
+                    : new[] { MSBuildTargetPlatform.x86 };
+
+            MSBuild(s => s
+                .SetTargetPath(MsBuildProject)
+                .SetConfiguration(Configuration)
+                .SetTargets("BuildCpp", "BuildCppTests")
+                .SetNoWarnDotNetCore3()
+                .SetMaxCpuCount(null)
+                .CombineWith(platforms, (m, platform) => m
+                    .SetTargetPlatform(platform)));
+        });
+
+    Target CompileMsi => _ => _
+        .After(CompileNative)
+        .After(CompileSolution)
+        .Executes(() =>
+        {
+            // If we're building for x64, build for x86 too 
+            var platforms =
+                Equals(Platform, MSBuildTargetPlatform.x64)
+                    ? new[] { MSBuildTargetPlatform.x64, MSBuildTargetPlatform.x86 }
+                    : new[] { MSBuildTargetPlatform.x86 };
+            
+            MSBuild(s => s
+                .SetTargetPath(MsBuildProject)
+                .SetConfiguration(Configuration)
+                .SetTargets("msi")
+                .CombineWith(platforms, (m, platform) => m
+                    .SetTargetPlatform(platform)));
+        });
+    
+    Target BuildTracerHome => _ => _
+        .After(CompileMsi)
         .Executes(() =>
         {
             MSBuild(s => s
                 .SetTargetPath(MsBuildProject)
                 .SetConfiguration(Configuration)
-                .SetTargetPlatform(Platform)
-                .SetTargets("BuildCpp", "BuildCppTests")
-                .SetNoWarnDotNetCore3()
-                .SetMaxCpuCount(null));
+                .SetTargets("CreateHomeDirectory")
+                .SetProperty("Platform", "All"));
         });
-
+    
     Target CompileTracerHome => _ => _
         .After(Restore)
         .Requires(() => Platform)
@@ -277,7 +329,8 @@ class Build : NukeBuild
         });
 
     Target CompileFrameworkReproductions => _ => _
-        .After(Restore)
+        .After(CompileSolution)
+        .After(CompileNative)
         .Requires(() => PublishOutputPath != null)
         .Executes(() =>
         {
@@ -315,16 +368,27 @@ class Build : NukeBuild
 
     Target CleanBuild => _ =>
         _.DependsOn(Clean)
-         .DependsOn(Restore)
-         .DependsOn(CompileSolution);
-        
+            .DependsOn(Restore)
+            .DependsOn(CompileSolution)
+            .DependsOn(CompileNative)
+            .DependsOn(CompileFrameworkReproductions)
+            .DependsOn(CompileIntegrationTests)
+            .DependsOn(CompileSamples);
+
+    Target LocalBuild => _ =>
+        _
+            .Description("Builds the tracer as described in the README")
+            .DependsOn(Clean)
+            .DependsOn(Restore)
+            .DependsOn(CompileSolution)
+            .DependsOn(PackNuGet)
+            .DependsOn(CompileNative)
+            .DependsOn(CompileMsi)
+            .DependsOn(BuildTracerHome);
+    
+
     /// <summary>  
     /// Run the default build 
     /// </summary> 
-    public static int Main() => Execute<Build>(x => x.CiWindowsIntegrationTests);
-
-    public Build()
-    {
-        NoLogo = true;
-    }
+    public static int Main() => Execute<Build>(x => x.LocalBuild);
 }
