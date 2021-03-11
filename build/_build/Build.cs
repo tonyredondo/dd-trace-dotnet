@@ -321,5 +321,10 @@ class Build : NukeBuild
     /// <summary>  
     /// Run the default build 
     /// </summary> 
-    public static int Main() => Execute<Build>(x => x.CiWindowsIntegrationTests);  
+    public static int Main() => Execute<Build>(x => x.CiWindowsIntegrationTests);
+
+    public Build()
+    {
+        NoLogo = true;
+    }
 }
