@@ -68,6 +68,9 @@ class Build : NukeBuild
     Project ManagedProfilerProject => Solution.GetProject("Datadog.Trace.ClrProfiler.Managed");
     Project NativeProfilerProject => Solution.GetProject("Datadog.Trace.ClrProfiler.Native");
 
+    [PathExecutable(name: "cmake")] readonly Tool CMake;
+    [PathExecutable(name: "make")] readonly Tool Make;
+    
     IEnumerable<MSBuildTargetPlatform> ArchitecturesForPlatform =>
         Equals(Platform, MSBuildTargetPlatform.x64)
             ? new[] {MSBuildTargetPlatform.x64, MSBuildTargetPlatform.x86}
@@ -90,8 +93,8 @@ class Build : NukeBuild
     Target Clean => _ => _
         .Executes(() =>
         {
-            SourceDirectory.GlobDirectories("**/bin", "**/obj").ForEach(DeleteDirectory);
-            TestsDirectory.GlobDirectories("**/bin", "**/obj").ForEach(DeleteDirectory);
+            SourceDirectory.GlobDirectories("**/bin", "**/obj").ForEach(x => EnsureCleanDirectory(x));
+            TestsDirectory.GlobDirectories("**/bin", "**/obj").ForEach(x => EnsureCleanDirectory(x));
             EnsureCleanDirectory(PublishOutputPath);
             EnsureCleanDirectory(TracerHomeDirectory);
             EnsureCleanDirectory(ArtifactsDirectory);
@@ -123,9 +126,9 @@ class Build : NukeBuild
             DotNetRestore(s => s
                 .SetProjectFile(Solution)
                 .SetVerbosity(DotNetVerbosity.Normal)
-                .SetTargetPlatform(Platform)
+                .SetTargetPlatform(Platform) // necessary to ensure we restore every project
                 .SetProperty("configuration", Configuration.ToString())
-                .SetNoWarnDotNetCore3()
+                // .SetNoWarnDotNetCore3()
                 .When(!string.IsNullOrEmpty(NugetManagedCacheFolder), o => 
                         o.SetPackageDirectory(NugetManagedCacheFolder)));
         });
@@ -328,6 +331,19 @@ class Build : NukeBuild
                 .CombineWith(platforms, (m, platform) => m
                     .SetTargetPlatform(platform)));
         });
+    
+    Target CompileNativeSrcLinux => _ => _
+        .After(CompileManagedSrc)
+        .Executes(() =>
+        {
+            var envVars = new Dictionary<string, string>
+            {
+                {"CXX", "clang++"},
+                {"CC", "clang"},
+            };
+            CMake(arguments: ".", environmentVariables: envVars);
+            Make();
+        });
 
     Target CompileMsi => _ => _
         .After(CompileNativeSrcWindows)
@@ -513,6 +529,24 @@ class Build : NukeBuild
             .DependsOn(BuildMsi)
             .DependsOn(CompileManagedUnitTests);
     
+    Target LinuxFullCiBuild => _ =>
+        _
+            .Description("Convenience method for running the same build steps as the full Windows CI build")
+            .DependsOn(Clean)
+            .DependsOn(RestoreDotNet)
+            .DependsOn(CompileManagedSrc)
+            .DependsOn(CompileNativeSrcLinux)
+            .DependsOn(BuildTracerHomeWindows)
+            .DependsOn(ZipTracerHome)
+            .DependsOn(PackNuGet)
+            .DependsOn(BuildMsi)
+            .DependsOn(CompileManagedUnitTests);
+
+    Target PlayWithSolutionConfigurations => _ =>
+        _.Executes(() =>
+        {
+            SolutionHelper.AddBuildSrcConfiguration(Solution);
+        });
 
     /// <summary>  
     /// Run the default build 
