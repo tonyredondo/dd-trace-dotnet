@@ -7,6 +7,8 @@
 
   <ItemGroup>
     <CsharpProject Include="src\**\*.csproj" Exclude="src/Datadog.Trace.Tools.Runner/*.csproj" />
+    <CsharpUnitTestProject Include="test\**\Datadog.Trace.ClrProfiler.Managed.Tests.csproj"/>
+    <CsharpTestHelperProject Include="test\**\*.TestHelpers.csproj"/>
     <CsharpTestProject Include="test\**\*.csproj"/>
     <CppProject Include="src\**\*.vcxproj"/>
     <CppTestProject Include="test\**\*.vcxproj"/>
@@ -15,6 +17,30 @@
     <WindowsInstallerProject Include="src\**\*.wixproj"/>
   </ItemGroup>
 
+  <Target Name="BuildCsharpSrc">
+    <MSBuild Targets="Build" Projects="@(CsharpProject)" Properties="Platform=AnyCPU">
+      <Output TaskParameter="TargetOutputs" ItemName="CollectedBuildOutput"/>
+    </MSBuild>
+  </Target>
+  
+  <Target Name="BuildCsharpUnitTests">
+    <MSBuild Targets="Build" Projects="@(CsharpTestHelperProject);@(CsharpUnitTestProject)">
+      <Output TaskParameter="TargetOutputs" ItemName="CollectedBuildOutput"/>
+    </MSBuild>
+  </Target>
+  
+  <Target Name="BuildCppSrc">
+    <MSBuild Targets="Build" Projects="@(CppProject)">
+      <Output TaskParameter="TargetOutputs" ItemName="CollectedBuildOutput"/>
+    </MSBuild>
+  </Target>
+  
+  <Target Name="BuildMsi">
+    <MSBuild Targets="Build" Projects="@(WindowsInstallerProject)">
+      <Output TaskParameter="TargetOutputs" ItemName="CollectedBuildOutput"/>
+    </MSBuild>
+  </Target>
+  
   <ItemGroup>
     <FrameworkReproduction Include="test\test-applications\regression\EntityFramework6x.MdTokenLookupFailure\EntityFramework6x.MdTokenLookupFailure.csproj" />
     <FrameworkReproduction Include="test\test-applications\regression\StackExchange.Redis.AssemblyConflict.LegacyProject\StackExchange.Redis.AssemblyConflict.LegacyProject.csproj" />
