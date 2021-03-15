@@ -168,6 +168,21 @@ class Build : NukeBuild
                 .SetTargets("BuildCsharpUnitTests")
                 .SetVerbosity(MSBuildVerbosity.Normal));
         });
+    
+    Target RunManagedUnitTests => _ => _
+        .After(CompileManagedUnitTests)
+        .Executes(() =>
+        {
+            var testProjects = RootDirectory.GlobFiles("test/**/*.Tests.csproj");
+
+            DotNetTest(x => x
+                .EnableNoRestore()
+                .EnableNoBuild()
+                .SetConfiguration(Configuration)
+                .SetDDEnvironmentVariables()
+                .CombineWith(testProjects, (x, project) => x
+                    .SetProjectFile(project)));
+        });
 
     Target CompileIntegrationTests => _ => _
         .After(CompileFrameworkReproductions)
@@ -254,25 +269,6 @@ class Build : NukeBuild
                 .SetOutputDirectory(ArtifactsDirectory)
                 .CombineWith(NuGetPackages, (x, project) => x
                     .SetProject(project)));
-        });
-
-    Target RunUnitTests => _ => _
-        .After(CompileManagedUnitTests)
-        .Executes(() =>
-        {
-            var permutations =
-                from arch in ArchitecturesForPlatform
-                from project in RootDirectory.GlobFiles("test/**/*.Tests.csproj")
-                select new {arch, project};
-
-            DotNetTest(x => x
-                .EnableNoRestore()
-                .EnableNoBuild()
-                .SetConfiguration(Configuration)
-                .SetDDEnvironmentVariables()
-                .CombineWith(permutations, (x, p) => x
-                    .SetTargetPlatform(p.arch)
-                    .SetProjectFile(p.project)));
         });
     
     Target IntegrationTests => _ => _
@@ -528,7 +524,8 @@ class Build : NukeBuild
             .DependsOn(ZipTracerHome)
             .DependsOn(PackNuGet)
             .DependsOn(BuildMsi)
-            .DependsOn(CompileManagedUnitTests);
+            .DependsOn(CompileManagedUnitTests)
+            .DependsOn(RunManagedUnitTests);
     
     Target LinuxFullCiBuild => _ =>
         _
@@ -541,7 +538,8 @@ class Build : NukeBuild
             .DependsOn(ZipTracerHome)
             .DependsOn(PackNuGet)
             .DependsOn(BuildMsi)
-            .DependsOn(CompileManagedUnitTests);
+            .DependsOn(CompileManagedUnitTests)
+            .DependsOn(RunManagedUnitTests);
 
     Target PlayWithSolutionConfigurations => _ =>
         _.Executes(() =>
