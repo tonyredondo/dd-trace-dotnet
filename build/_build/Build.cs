@@ -395,6 +395,21 @@ class Build : NukeBuild
             }
         });
     
+    Target PublishNativeProfilerLinux => _ => _
+        .After(CompileNativeSrcWindows)
+        .Executes(() =>
+        {
+            // TODO: Linux: x64, arm64; alpine: x64
+            foreach (var architecture in new []{ MSBuildTargetPlatform.x64})
+            {
+                var source = NativeProfilerProject.Directory / "bin" / Configuration / architecture.ToString() /
+                             $"{NativeProfilerProject.Name}.so";
+                var dest = TracerHomeDirectory / $"linux-{architecture}";
+                Logger.Info($"Copying '{source}' to '{dest}'");
+                CopyFileToDirectory(source, dest, FileExistsPolicy.OverwriteIfNewer);
+            }
+        });
+    
     Target CopyIntegrationsJson => _ => _
         .After(PublishManagedProfiler)
         .Executes(() =>
@@ -411,6 +426,11 @@ class Build : NukeBuild
         .DependsOn(PublishNativeProfilerWindows)
         .DependsOn(CopyIntegrationsJson);
     
+    Target BuildTracerHomeLinux => _ => _
+        .DependsOn(PublishManagedProfiler)
+        .DependsOn(PublishNativeProfilerLinux)
+        .DependsOn(CopyIntegrationsJson);
+
     Target ZipTracerHome => _ => _
         .After(PublishManagedProfiler)
         .After(PublishNativeProfilerWindows)
@@ -526,7 +546,7 @@ class Build : NukeBuild
             .DependsOn(BuildMsi)
             .DependsOn(CompileManagedUnitTests)
             .DependsOn(RunManagedUnitTests);
-    
+
     Target LinuxFullCiBuild => _ =>
         _
             .Description("Convenience method for running the same build steps as the full Windows CI build")
@@ -534,10 +554,8 @@ class Build : NukeBuild
             .DependsOn(RestoreDotNet)
             .DependsOn(CompileManagedSrc)
             .DependsOn(CompileNativeSrcLinux)
-            .DependsOn(BuildTracerHomeWindows)
-            .DependsOn(ZipTracerHome)
-            .DependsOn(PackNuGet)
-            .DependsOn(BuildMsi)
+            .DependsOn(BuildTracerHomeLinux)
+            // .DependsOn(ZipTracerHome)
             .DependsOn(CompileManagedUnitTests)
             .DependsOn(RunManagedUnitTests);
 
