@@ -19,6 +19,7 @@ using static Nuke.Common.IO.PathConstruction;
 using static Nuke.Common.IO.CompressionTasks;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
 using static Nuke.Common.Tools.MSBuild.MSBuildTasks;
+using static CustomDotNetTasks;
 
 // #pragma warning disable SA1306  
 // #pragma warning disable SA1134  
@@ -144,7 +145,7 @@ class Build : NukeBuild
         .Executes(() =>
         {
             // Always AnyCPU
-            MSBuild(x => x
+            DotNetMSBuild(x => x
                 .SetTargetPath(MsBuildProject)
                 .SetConfiguration(Configuration)
                 .DisableRestore()
@@ -158,15 +159,14 @@ class Build : NukeBuild
         .After(CompileManagedSrc)
         .Executes(() =>
         {
-            MSBuild(x => x
+            // Always AnyCPU
+            DotNetMSBuild(x => x
                 .SetTargetPath(MsBuildProject)
                 .SetConfiguration(Configuration)
                 .DisableRestore()
                 .SetProperty("BuildProjectReferences", false)
                 .SetTargets("BuildCsharpUnitTests")
-                .SetVerbosity(MSBuildVerbosity.Detailed)
-                .CombineWith(ArchitecturesForPlatform, (x, arch) => x
-                    .SetTargetPlatform(arch)));
+                .SetVerbosity(MSBuildVerbosity.Normal));
         });
 
     Target CompileIntegrationTests => _ => _
@@ -322,6 +322,7 @@ class Build : NukeBuild
                     ? new[] { MSBuildTargetPlatform.x64, MSBuildTargetPlatform.x86 }
                     : new[] { MSBuildTargetPlatform.x86 };
 
+            // Can't use dotnet msbuild, as needs to use the VS version of MSBuild
             MSBuild(s => s
                 .SetTargetPath(MsBuildProject)
                 .SetConfiguration(Configuration)
@@ -341,8 +342,8 @@ class Build : NukeBuild
                 {"CXX", "clang++"},
                 {"CC", "clang"},
             };
-            CMake(arguments: ".", environmentVariables: envVars);
-            Make();
+            CMake.Value(arguments: ".", environmentVariables: envVars);
+            Make.Value();
         });
 
     Target CompileMsi => _ => _

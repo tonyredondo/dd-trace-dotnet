@@ -7,7 +7,7 @@
 
   <ItemGroup>
     <CsharpProject Include="src\**\*.csproj" Exclude="src/Datadog.Trace.Tools.Runner/*.csproj" />
-    <CsharpUnitTestProject Include="test\**\Datadog.Trace.ClrProfiler.Managed.Tests.csproj"/>
+    <CsharpUnitTestProject Include="test\**\*.Tests.csproj"/>
     <CsharpTestHelperProject Include="test\**\*.TestHelpers.csproj"/>
     <CsharpTestProject Include="test\**\*.csproj"/>
     <CppProject Include="src\**\*.vcxproj"/>
