@@ -14,3 +14,4 @@ public class TargetFramework : Enumeration
         return framework.Value;
     }
 }
+

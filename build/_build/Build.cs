@@ -68,8 +68,8 @@ class Build : NukeBuild
     Project ManagedProfilerProject => Solution.GetProject("Datadog.Trace.ClrProfiler.Managed");
     Project NativeProfilerProject => Solution.GetProject("Datadog.Trace.ClrProfiler.Native");
 
-    [PathExecutable(name: "cmake")] readonly Tool CMake;
-    [PathExecutable(name: "make")] readonly Tool Make;
+    [LazyPathExecutable(name: "cmake")] readonly Lazy<Tool> CMake;
+    [LazyPathExecutable(name: "make")] readonly Lazy<Tool> Make;
     
     IEnumerable<MSBuildTargetPlatform> ArchitecturesForPlatform =>
         Equals(Platform, MSBuildTargetPlatform.x64)
