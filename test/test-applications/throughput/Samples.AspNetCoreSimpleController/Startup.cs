@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,6 +15,8 @@ namespace Samples.AspNetCoreSimpleController
 {
     public class Startup
     {
+        internal static Uri MyAddress { get; private set; }
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -25,6 +28,7 @@ namespace Samples.AspNetCoreSimpleController
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
+            services.AddHttpClient();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -43,6 +47,9 @@ namespace Samples.AspNetCoreSimpleController
             {
                 endpoints.MapControllers();
             });
+
+            var serverAddressesFeature = app.ServerFeatures.Get<IServerAddressesFeature>();
+            MyAddress = new Uri(serverAddressesFeature.Addresses.First());
         }
     }
 }

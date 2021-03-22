@@ -429,6 +429,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "crank", "crank", "{E3FB283A
 	ProjectSection(SolutionItems) = preProject
 		build\crank\run.sh = build\crank\run.sh
 		build\crank\Samples.AspNetCoreSimpleController.yml = build\crank\Samples.AspNetCoreSimpleController.yml
+		build\crank\Samples.AspNetCoreSimpleController_http.yml = build\crank\Samples.AspNetCoreSimpleController_http.yml
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DuplicateTypeProxy", "test\test-applications\regression\DuplicateTypeProxy\DuplicateTypeProxy.csproj", "{34B67004-7249-4EF1-8E12-6E6DA37EA6BE}"
