@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -38,11 +40,11 @@ namespace Datadog.Trace
         /// </summary>
         private static int _firstInitialization = 1;
 
-        private static Tracer _instance;
+        private static Tracer? _instance;
         private static bool _globalInstanceInitialized;
         private static object _globalInstanceLock = new object();
 
-        private static RuntimeMetricsWriter _runtimeMetricsWriter;
+        private static RuntimeMetricsWriter? _runtimeMetricsWriter;
 
         private readonly IScopeManager _scopeManager;
         private readonly Timer _heartbeatTimer;
@@ -70,12 +72,12 @@ namespace Datadog.Trace
         /// A <see cref="TracerSettings"/> instance with the desired settings,
         /// or null to use the default configuration sources.
         /// </param>
-        public Tracer(TracerSettings settings)
+        public Tracer(TracerSettings? settings)
             : this(settings, agentWriter: null, sampler: null, scopeManager: null, statsd: null)
         {
         }
 
-        internal Tracer(TracerSettings settings, IAgentWriter agentWriter, ISampler sampler, IScopeManager scopeManager, IDogStatsd statsd)
+        internal Tracer(TracerSettings? settings, IAgentWriter? agentWriter, ISampler? sampler, IScopeManager? scopeManager, IDogStatsd? statsd)
         {
             // update the count of Tracer instances
             Interlocked.Increment(ref _liveTracerCount);
@@ -196,7 +198,7 @@ namespace Datadog.Trace
         {
             get
             {
-                return LazyInitializer.EnsureInitialized(ref _instance, ref _globalInstanceInitialized, ref _globalInstanceLock);
+                return LazyInitializer.EnsureInitialized(ref _instance, ref _globalInstanceInitialized, ref _globalInstanceLock)!;
             }
 
             set
@@ -236,7 +238,7 @@ namespace Datadog.Trace
 
         internal ISampler Sampler { get; }
 
-        internal IDogStatsd Statsd { get; private set; }
+        internal IDogStatsd? Statsd { get; private set; }
 
         /// <summary>
         /// Create a new Tracer with the given parameters
@@ -245,7 +247,7 @@ namespace Datadog.Trace
         /// <param name="defaultServiceName">Default name of the service (default is the name of the executing assembly).</param>
         /// <param name="isDebugEnabled">Turns on all debug logging (this may have an impact on application performance).</param>
         /// <returns>The newly created tracer</returns>
-        public static Tracer Create(Uri agentEndpoint = null, string defaultServiceName = null, bool isDebugEnabled = false)
+        public static Tracer Create(Uri? agentEndpoint = null, string? defaultServiceName = null, bool isDebugEnabled = false)
         {
             // Keep supporting this older public method by creating a TracerConfiguration
             // from default sources, overwriting the specified settings, and passing that to the constructor.
@@ -297,7 +299,7 @@ namespace Datadog.Trace
         /// <param name="ignoreActiveScope">If set the span will not be a child of the currently active span</param>
         /// <param name="finishOnClose">If set to false, closing the returned scope will not close the enclosed span </param>
         /// <returns>A scope wrapping the newly created span</returns>
-        public Scope StartActive(string operationName, ISpanContext parent = null, string serviceName = null, DateTimeOffset? startTime = null, bool ignoreActiveScope = false, bool finishOnClose = true)
+        public Scope StartActive(string operationName, ISpanContext? parent = null, string? serviceName = null, DateTimeOffset? startTime = null, bool ignoreActiveScope = false, bool finishOnClose = true)
         {
             var span = StartSpan(operationName, parent, serviceName, startTime, ignoreActiveScope);
             return _scopeManager.Activate(span, finishOnClose);
@@ -333,7 +335,7 @@ namespace Datadog.Trace
         /// <param name="startTime">An explicit start time for that span</param>
         /// <param name="ignoreActiveScope">If set the span will not be a child of the currently active span</param>
         /// <returns>The newly created span</returns>
-        public Span StartSpan(string operationName, ISpanContext parent = null, string serviceName = null, DateTimeOffset? startTime = null, bool ignoreActiveScope = false)
+        public Span StartSpan(string operationName, ISpanContext? parent = null, string? serviceName = null, DateTimeOffset? startTime = null, bool ignoreActiveScope = false)
         {
             return StartSpan(operationName, tags: null, parent, serviceName, startTime, ignoreActiveScope, spanId: null);
         }
@@ -350,7 +352,7 @@ namespace Datadog.Trace
             }
         }
 
-        internal SpanContext CreateSpanContext(ISpanContext parent = null, string serviceName = null, bool ignoreActiveScope = false, ulong? spanId = null)
+        internal SpanContext CreateSpanContext(ISpanContext? parent, string? serviceName, bool ignoreActiveScope, ulong? spanId)
         {
             if (parent == null && !ignoreActiveScope)
             {
@@ -381,13 +383,13 @@ namespace Datadog.Trace
             return spanContext;
         }
 
-        internal Scope StartActiveWithTags(string operationName, ISpanContext parent = null, string serviceName = null, DateTimeOffset? startTime = null, bool ignoreActiveScope = false, bool finishOnClose = true, ITags tags = null, ulong? spanId = null)
+        internal Scope StartActiveWithTags(string operationName, ISpanContext? parent = null, string? serviceName = null, DateTimeOffset? startTime = null, bool ignoreActiveScope = false, bool finishOnClose = true, ITags? tags = null, ulong? spanId = null)
         {
             var span = StartSpan(operationName, tags, parent, serviceName, startTime, ignoreActiveScope, spanId);
             return _scopeManager.Activate(span, finishOnClose);
         }
 
-        internal Span StartSpan(string operationName, ITags tags, ISpanContext parent = null, string serviceName = null, DateTimeOffset? startTime = null, bool ignoreActiveScope = false, ulong? spanId = null)
+        internal Span StartSpan(string operationName, ITags? tags, ISpanContext? parent = null, string? serviceName = null, DateTimeOffset? startTime = null, bool ignoreActiveScope = false, ulong? spanId = null)
         {
             var spanContext = CreateSpanContext(parent, serviceName, ignoreActiveScope, spanId);
 
@@ -419,7 +421,8 @@ namespace Datadog.Trace
                 span.SetTag(Tags.Version, version);
             }
 
-            spanContext.TraceContext.AddSpan(span);
+            // CreateSpanContext() ensures that spanContext.TraceContext is not null
+            spanContext.TraceContext!.AddSpan(span);
             return span;
         }
 
@@ -430,7 +433,7 @@ namespace Datadog.Trace
 
         internal async Task WriteDiagnosticLog()
         {
-            string agentError = null;
+            string? agentError = null;
 
             // In AAS, the trace agent is deployed alongside the tracer and managed by the tracer
             // Disable this check as it may hit the trace agent before it is ready to receive requests and give false negatives
@@ -556,7 +559,7 @@ namespace Datadog.Trace
         /// the hosted app name (.NET Framework on IIS only), assembly name, and process name.
         /// </summary>
         /// <returns>The default service name.</returns>
-        private static string GetApplicationName()
+        private static string? GetApplicationName()
         {
             try
             {
@@ -583,7 +586,7 @@ namespace Datadog.Trace
             }
         }
 
-        private static bool TryLoadAspNetSiteName(out string siteName)
+        private static bool TryLoadAspNetSiteName(out string? siteName)
         {
 #if NETFRAMEWORK
             // System.Web.dll is only available on .NET Framework
@@ -657,7 +660,7 @@ namespace Datadog.Trace
             new LibLogScopeEventSubscriber(scopeManager, defaultServiceName, version ?? string.Empty, env ?? string.Empty);
         }
 
-        private void CurrentDomain_ProcessExit(object sender, EventArgs e)
+        private void CurrentDomain_ProcessExit(object? sender, EventArgs e)
         {
             RunShutdownTasks();
         }
@@ -673,7 +676,7 @@ namespace Datadog.Trace
             RunShutdownTasks();
         }
 
-        private void CurrentDomain_DomainUnload(object sender, EventArgs e)
+        private void CurrentDomain_DomainUnload(object? sender, EventArgs e)
         {
             RunShutdownTasks();
         }
@@ -690,7 +693,7 @@ namespace Datadog.Trace
             }
         }
 
-        private void HeartbeatCallback(object state)
+        private void HeartbeatCallback(object? state)
         {
             // use the count of Tracer instances as the heartbeat value
             // to estimate the number of "live" Tracers than can potentially

@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.Globalization;
 using System.Text;
@@ -23,15 +25,15 @@ namespace Datadog.Trace
         private readonly object _lock = new object();
 
         internal Span(SpanContext context, DateTimeOffset? start)
-            : this(context, start, null)
+            : this(context, start, tags: null)
         {
         }
 
-        internal Span(SpanContext context, DateTimeOffset? start, ITags tags)
+        internal Span(SpanContext context, DateTimeOffset? start, ITags? tags)
         {
             Tags = tags ?? new CommonTags();
             Context = context;
-            StartTime = start ?? Context.TraceContext.UtcNow;
+            StartTime = start ?? Context.TraceContext?.UtcNow ?? DateTimeOffset.UtcNow;
 
             Log.Debug(
                 "Span started: [s_id: {SpanID}, p_id: {ParentId}, t_id: {TraceId}]",
@@ -43,19 +45,19 @@ namespace Datadog.Trace
         /// <summary>
         /// Gets or sets operation name
         /// </summary>
-        public string OperationName { get; set; }
+        public string? OperationName { get; set; }
 
         /// <summary>
         /// Gets or sets the resource name
         /// </summary>
-        public string ResourceName { get; set; }
+        public string? ResourceName { get; set; }
 
         /// <summary>
         /// Gets or sets the type of request this span represents (ex: web, db).
         /// Not to be confused with span kind.
         /// </summary>
         /// <seealso cref="SpanTypes"/>
-        public string Type { get; set; }
+        public string? Type { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether this span represents an error
@@ -65,7 +67,7 @@ namespace Datadog.Trace
         /// <summary>
         /// Gets or sets the service name.
         /// </summary>
-        public string ServiceName
+        public string? ServiceName
         {
             get => Context.ServiceName;
             set => Context.ServiceName = value;
@@ -298,11 +300,11 @@ namespace Datadog.Trace
         }
 
         /// <summary>
-        /// Gets the value (or default/null if the key is not a valid tag) of a tag with the key value passed
+        /// Gets the value of the tag with the specified key.
         /// </summary>
-        /// <param name="key">The tag's key</param>
-        /// <returns> The value for the tag with the key specified, or null if the tag does not exist</returns>
-        public string GetTag(string key)
+        /// <param name="key">The tag's key.</param>
+        /// <returns>The value of the tag with the specified key, or <c>null</c> if the tag does not exist.</returns>
+        public string? GetTag(string key)
         {
             switch (key)
             {

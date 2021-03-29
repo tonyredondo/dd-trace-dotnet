@@ -1,3 +1,5 @@
+#nullable enable
+
 using Datadog.Trace.Util;
 
 namespace Datadog.Trace
@@ -16,7 +18,7 @@ namespace Datadog.Trace
         /// <param name="spanId">The propagated span id.</param>
         /// <param name="samplingPriority">The propagated sampling priority.</param>
         /// <param name="serviceName">The service name to propagate to child spans.</param>
-        public SpanContext(ulong? traceId, ulong spanId, SamplingPriority? samplingPriority = null, string serviceName = null)
+        public SpanContext(ulong? traceId, ulong spanId, SamplingPriority? samplingPriority = null, string? serviceName = null)
             : this(traceId, serviceName)
         {
             SpanId = spanId;
@@ -49,7 +51,7 @@ namespace Datadog.Trace
         /// <param name="traceContext">The trace context.</param>
         /// <param name="serviceName">The service name to propagate to child spans.</param>
         /// <param name="spanId">The propagated span id.</param>
-        internal SpanContext(ISpanContext parent, ITraceContext traceContext, string serviceName, ulong? spanId = null)
+        internal SpanContext(ISpanContext? parent, ITraceContext traceContext, string serviceName, ulong? spanId = null)
             : this(parent?.TraceId, serviceName)
         {
             SpanId = spanId ?? SpanIdGenerator.ThreadInstance.CreateNew();
@@ -61,7 +63,7 @@ namespace Datadog.Trace
             }
         }
 
-        private SpanContext(ulong? traceId, string serviceName)
+        private SpanContext(ulong? traceId, string? serviceName)
         {
             TraceId = traceId > 0
                           ? traceId.Value
@@ -73,7 +75,7 @@ namespace Datadog.Trace
         /// <summary>
         /// Gets the parent context.
         /// </summary>
-        public ISpanContext Parent { get; }
+        public ISpanContext? Parent { get; }
 
         /// <summary>
         /// Gets the trace id
@@ -93,18 +95,18 @@ namespace Datadog.Trace
         /// <summary>
         /// Gets or sets the service name to propagate to child spans.
         /// </summary>
-        public string ServiceName { get; set; }
+        public string? ServiceName { get; set; }
 
         /// <summary>
         /// Gets the origin of the trace
         /// </summary>
-        internal string Origin { get; }
+        internal string? Origin { get; }
 
         /// <summary>
         /// Gets the trace context.
         /// Returns null for contexts created from incoming propagated context.
         /// </summary>
-        internal ITraceContext TraceContext { get; }
+        internal ITraceContext? TraceContext { get; }
 
         /// <summary>
         /// Gets the sampling priority for contexts created from incoming propagated context.
