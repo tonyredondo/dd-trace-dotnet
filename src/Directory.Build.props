@@ -31,4 +31,9 @@
     <!-- reference assemblies let us target .NET Framework without the SDK (for example, on non-Windows) -->
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.0" PrivateAssets="all" />
   </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' != 'net45' ">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)Datadog.Trace.Tools.Analyzers\Datadog.Trace.Tools.Analyzers.csproj" OutputItemType="Analyzer" PrivateAssets="All" />
+  </ItemGroup>
+
 </Project>
