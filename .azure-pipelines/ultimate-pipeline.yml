@@ -468,6 +468,8 @@ stages:
       inputs:
         restoreSolution: Datadog.Trace.sln
         verbosityRestore: Normal
+        feedsToUse: config
+        nugetConfigPath: ./NuGet.config
 
     - task: MSBuild@1
       displayName: Build .NET Framework projects (not SDK-based projects)
@@ -553,6 +555,8 @@ stages:
       inputs:
         restoreSolution: Datadog.Trace.sln
         verbosityRestore: Normal
+        feedsToUse: config
+        nugetConfigPath: ./NuGet.config
 
     - task: MSBuild@1
       displayName: Build .NET Framework projects (not SDK-based projects)
