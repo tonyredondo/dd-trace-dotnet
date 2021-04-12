@@ -74,10 +74,10 @@ partial class Build : NukeBuild
             ? new[] {MSBuildTargetPlatform.x64, MSBuildTargetPlatform.x86}
             : new[] {MSBuildTargetPlatform.x86};
     
-    IEnumerable<Project> NuGetPackages => new []
+    IEnumerable<Project> ProjectsToPack => new []
     {
-        Solution.GetProject("Datadog.Trace"),
-        Solution.GetProject("Datadog.Trace.OpenTracing"),
+        Solution.GetProject(Projects.DatadogTrace),
+        Solution.GetProject(Projects.DatadogTraceOpenTracing),
     };
     
     readonly IEnumerable<TargetFramework> TargetFrameworks = new []
@@ -165,7 +165,7 @@ partial class Build : NukeBuild
                     .EnableNoBuild()
                     .SetConfiguration(Configuration)
                     .SetOutputDirectory(ArtifactsDirectory / "nuget")
-                    .CombineWith(NuGetPackages, (x, project) => x
+                    .CombineWith(ProjectsToPack, (x, project) => x
                         .SetProject(project)),
                 degreeOfParallelism: 2);
         });
