@@ -91,8 +91,8 @@ partial class Build : NukeBuild
     Target Clean => _ => _
         .Executes(() =>
         {
-            SourceDirectory.GlobDirectories("**/bin", "**/obj").ForEach(x => EnsureCleanDirectory(x));
-            TestsDirectory.GlobDirectories("**/bin", "**/obj").ForEach(x => EnsureCleanDirectory(x));
+            SourceDirectory.GlobDirectories("**/bin", "**/obj").ForEach(x => DeleteDirectory(x));
+            TestsDirectory.GlobDirectories("**/bin", "**/obj").ForEach(x => DeleteDirectory(x));
             EnsureCleanDirectory(OutputDirectory);
             EnsureCleanDirectory(TracerHomeDirectory);
             EnsureCleanDirectory(ArtifactsDirectory);
@@ -398,7 +398,14 @@ partial class Build : NukeBuild
                 .SetTargetPlatform(Platform)
                 .SetTargets("BuildRegressionDependencyLibs")
             );
+        });
 
+    Target CompileRegressionSamples => _ => _
+        .DependsOn(Restore)
+        .DependsOn(CopyPlatformlessBuildOutput)
+        .DependsOn(CompileRegressionDependencyLibs)
+        .Executes(() =>
+        {
             // explicitly build the other dependency (with restore to avoid runtime identifier dependency issues)
             DotNetBuild(x => x
                 .SetProjectFile(Solution.GetProject(Projects.ApplicationWithLog4Net))
@@ -409,13 +416,7 @@ partial class Build : NukeBuild
                 .SetNoWarnDotNetCore3()
                 .When(!string.IsNullOrEmpty(NugetPackageDirectory), o =>
                     o.SetPackageDirectory(NugetPackageDirectory)));
-        });
 
-    Target CompileRegressionSamples => _ => _
-        .DependsOn(Restore)
-        .DependsOn(CompileRegressionDependencyLibs)
-        .Executes(() =>
-        {
             var regressionsDirectory = Solution.GetProject(Projects.EntityFramework6xMdTokenLookupFailure)
                 .Directory.Parent;
             var regressionLibs = GlobFiles(regressionsDirectory / "**" / "*.csproj")
@@ -605,10 +606,10 @@ partial class Build : NukeBuild
         .Executes(() =>
         {
             var directories = RootDirectory.GlobDirectories(
-                $"**/bin/bin/src/**/{Configuration}",
-                $"**/bin/bin/tools/**/{Configuration}",
-                $"**/bin/bin/test/Datadog.Trace.TestHelpers/**/{Configuration}",
-                $"**/bin/bin/test/test-applications/integrations/dependency-libs/**/{Configuration}"
+                $"src/**/bin/{Configuration}",
+                $"tools/**/bin/{Configuration}",
+                $"test/Datadog.Trace.TestHelpers/**/bin/{Configuration}",
+                $"test/test-applications/integrations/dependency-libs/**/bin/{Configuration}"
             );
             directories.ForEach(source =>
             {
@@ -617,8 +618,10 @@ partial class Build : NukeBuild
                 {
                     Logger.Info($"Skipping '{target}' as already exists");
                 }
-
-                CopyDirectoryRecursively(source, target, DirectoryExistsPolicy.Fail, FileExistsPolicy.Fail);
+                else
+                {
+                    CopyDirectoryRecursively(source, target, DirectoryExistsPolicy.Fail, FileExistsPolicy.Fail);
+                }
             });
         });
 
