@@ -38,142 +38,75 @@ stages:
 - stage: build
   dependsOn: []
   jobs:
-  - job: build_managed
+  - job: build_managed # todo: rename
     pool:
       vmImage: windows-2019
     steps:
-    - task: UseDotNet@2
-      displayName: Install dotnet core sdk 5.0
-      inputs:
-        packageType: sdk
-        version: $(dotnetCoreSdk5Version)
+    - template: steps/install-dotnet-5-sdk.yml
 
-    - task: MSBuild@1
-      displayName: Build all managed projects
-      inputs:
-        solution: Datadog.Trace.proj
-        configuration: $(buildConfiguration)
-        msbuildArguments: /t:BuildCsharp
-        maximumCpuCount: true
+    - script: build.cmd CreateRequiredDirectories --skip
+      displayName: Create required directories
 
-    - task: MSBuild@1
-      displayName: Publish managed profiler to tracer home for Windows and Linux builds
-      inputs:
-        solution: Datadog.Trace.proj
-        configuration: $(buildConfiguration)
-        msbuildArguments: /t:PublishManagedProfilerOnDisk
-        maximumCpuCount: true
+    - script: build.cmd RestoreNuGet --skip
+      displayName: NuGet Restore
 
-    - task: DotNetCoreCLI@2
-      displayName: Create NuGet packages
-      inputs:
-        command: pack
-        nobuild: true
-        packagesToPack: src/Datadog.Trace/Datadog.Trace.csproj;src/Datadog.Trace.OpenTracing/Datadog.Trace.OpenTracing.csproj
-        packDirectory: $(System.DefaultWorkingDirectory)/nuget-output
+    - script: build.cmd CompileManagedSrc --skip
+      displayName: Compile Managed src
 
-    - publish: $(System.DefaultWorkingDirectory)/nuget-output
-      displayName: Upload NuGet packages
-      artifact: nuget-packages
+    - script: build.cmd PublishManagedProfiler --skip
+      displayName: Publish Managed Profiler
 
-    - publish: $(System.DefaultWorkingDirectory)
-      displayName: Upload working directory after the managed build
-      artifact: build-managed
+    - script: build.cmd CompileNativeSrcWindows --skip
+      displayName: Compile native src
 
-  - job: build_native_windows
-    dependsOn: build_managed # The native build relies on Datadog.Trace.ClrProfiler.Managed.Loader to be built
-    pool:
-      vmImage: windows-2019
-    variables:
-      msiHome: $(System.DefaultWorkingDirectory)/src/WindowsInstaller/bin/$(buildConfiguration)
-    steps:
-    - checkout: none
+    - script: build.cmd PublishNativeProfilerWindows --skip
+      displayName: Publish native profiler
 
-    - task: DownloadPipelineArtifact@2
-      inputs:
-        artifact: build-managed
-        path: $(System.DefaultWorkingDirectory)
-
-    - task: UseDotNet@2
-      displayName: install dotnet core sdk 5.0
-      inputs:
-        packageType: sdk
-        version: $(dotnetCoreSdk5Version)
-
-    # This is only here because the msi build later causes a restore error...not sure why
-    - task: DotNetCoreCLI@2
-      displayName: dotnet restore
-      inputs:
-        command: restore
-        projects: src/**/*.csproj
-
-    - task: NuGetToolInstaller@1
-      displayName: install nuget
-
-    - task: NuGetCommand@2
-      displayName: nuget restore
-      inputs:
-        restoreSolution: Datadog.Trace.Native.sln
-        verbosityRestore: Normal
-
-    # this triggers a dependency chain that builds all the managed, x64, and x86 dlls, and the zip and msi files
-    # Outputs include:
-    # - Windows Datadog.Trace.ClrProfiler.Native.dll (x86 and x64)
-    # - Windows MSI (x86 and x64)
-    # - Windows tracer home directory
-    - task: MSBuild@1
-      displayName: build both msi
-      inputs:
-        solution: Datadog.Trace.proj
-        configuration: $(buildConfiguration)
-        msbuildArguments: /t:msi /p:Platform=All;ZipHomeDirectory=true;RunWixToolsOutOfProc=true /p:TracerHomeDirectory=$(tracerHome)
-        maximumCpuCount: true
-
-    - publish: $(System.DefaultWorkingDirectory)
-      displayName: Upload repo after windows build
-      artifact: build-repo-managed-native-windows
-
-    - publish: $(msiHome)/x86/en-us
-      displayName: Upload Windows x86 MSI
-      artifact: windows-msi-x86
-
-    - publish: $(msiHome)/x64/en-us
-      displayName: Upload Windows x64 MSI
-      artifact: windows-msi-x64
+    - script: build.cmd CopyIntegrationsJson --skip
+      displayName: Copy integrations.json
 
     - publish: $(tracerHome)
       displayName: Upload Windows tracer home directory
       artifact: build-windows-tracer-home
 
-    - publish: $(tracerHome).zip
-      displayName: Upload Windows tracer home zip
-      artifact: windows-tracer-home
+    - publish: $(System.DefaultWorkingDirectory)
+      displayName: Upload working directory after the managed build
+      artifact: build-managed
+
+    ## TODO: Move these to the package step?
+    ## - script: build.cmd ZipTracerHome --skip
+    ##   displayName: Zip tracer home directory
+
+    ## - script: build.cmd BuildMsi --skip
+    ##   displayName: Build the msi
+
+    ## - publish: $(artifacts)/x86/en-us
+    ##   displayName: Upload Windows x86 MSI
+    ##   artifact: windows-msi-x86
+
+    ## - publish: $(artifacts)/x64/en-us
+    ##   displayName: Upload Windows x64 MSI
+    ##   artifact: windows-msi-x64
+
+    ## - publish: $(artifacts)/tracer-home.zip
+    ##   displayName: Upload Windows tracer home zip
+    ##   artifact: windows-tracer-home
 
   - job: build_native_linux
     dependsOn: build_managed # The native build relies on Datadog.Trace.ClrProfiler.Managed.Loader to be built
     pool:
       vmImage: ubuntu-20.04
     steps:
-    - checkout: none
-
-    - task: DownloadPipelineArtifact@2
-      inputs:
-        artifact: build-managed
-        path: $(System.DefaultWorkingDirectory)
-
-    - script: |
-        chmod +x $(System.DefaultWorkingDirectory)/build/docker/Datadog.Trace.ClrProfiler.Native.sh
-      displayName: 'Workaround: Restore wiped executable permission on build/docker/Datadog.Trace.ClrProfiler.Native.sh'
+    - download: current
+      displayName: Download working dir
+      artifact: build-managed
+      patterns: "**/@(bin|obj)"
 
     - task: DockerCompose@0
       displayName: docker-compose run Profiler
       inputs:
         containerregistrytype: Container Registry
         dockerComposeCommand: run -e buildConfiguration=$(buildConfiguration) -e UNIFIED_PIPELINE=true Profiler
-
-    - script: |
-        chmod +x $(System.DefaultWorkingDirectory)/build/docker/package.sh
-      displayName: 'Workaround: Restore wiped executable permission on build/docker/package.sh'
 
     - task: DockerCompose@0
       displayName: docker-compose run package
@@ -386,7 +319,7 @@ stages:
 
     - task: DownloadPipelineArtifact@2
       inputs:
-        artifact: build-repo-managed-native-windows
+        artifact: build-managed
         path: $(System.DefaultWorkingDirectory)
 
     # Install the .NET SDK so any managed libraries needed for the C++ unit tests can be built
@@ -455,7 +388,7 @@ stages:
 
     - task: DownloadPipelineArtifact@2
       inputs:
-        artifact: build-repo-managed-native-windows
+        artifact: build-managed
         path: $(System.DefaultWorkingDirectory)
 
     - template: steps/install-dotnet-sdks.yml
@@ -540,7 +473,7 @@ stages:
 
     - task: DownloadPipelineArtifact@2
       inputs:
-        artifact: build-repo-managed-native-windows
+        artifact: build-managed
         path: $(System.DefaultWorkingDirectory)
 
     - template: steps/install-dotnet-sdks.yml
