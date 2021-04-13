@@ -261,5 +261,20 @@ namespace Datadog.Trace.ClrProfiler.IntegrationTests
 #endif
             };
 
+        public static IEnumerable<object[]> Kafka =>
+
+            new List<object[]>
+            {
+#if DEFAULT_SAMPLES
+                new object[] { string.Empty },
+#else
+#if NETFRAMEWORK
+#endif
+                new object[] { "1.4.4" },
+                new object[] { "1.5.3" },
+                new object[] { "1.6.3" },
+#endif
+            };
+
     }
 }

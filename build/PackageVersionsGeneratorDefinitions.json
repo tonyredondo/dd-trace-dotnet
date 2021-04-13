@@ -92,5 +92,12 @@
     "NugetPackageSearchName": "Oracle.ManagedDataAccess.Core",
     "MinVersion": "2.18.3",
     "MaxVersionExclusive": "3.0.0"
+  },
+  {
+    "IntegrationName": "Kafka",
+    "SampleProjectName": "Samples.Kafka",
+    "NugetPackageSearchName": "Confluent.Kafka",
+    "MinVersion": "1.4.0",
+    "MaxVersionExclusive": "2.0.0"
   }
 ]
