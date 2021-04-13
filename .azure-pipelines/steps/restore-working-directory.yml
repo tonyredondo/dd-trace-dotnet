@@ -8,7 +8,5 @@ steps:
   inputs:
     displayName: Download working dir
     artifact: ${{ parameters.artifact }}
-    patterns: |
-      "**/@(bin|obj)/**"
-      "packages/**"
+    patterns: "**/@(bin|obj|packages)/**"
     path: $(System.DefaultWorkingDirectory)
