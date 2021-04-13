@@ -179,7 +179,7 @@ stages:
     steps:
     - template: steps/restore-working-directory.yml
 
-    - script: ./build.sh CompileNativeSrcMacOS --skip
+    - script: build.sh CompileNativeSrcMacOS --skip
       displayName: Compile native src
 
     - script: |
