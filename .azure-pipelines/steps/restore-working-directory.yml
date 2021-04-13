@@ -1,5 +1,5 @@
 parameters:
-  - name: 'artifact'  # defaults for any parameters that aren't specified
+  - name: 'artifact'
     type: 'string'
     default: 'build-managed'
 
@@ -8,5 +8,7 @@ steps:
   inputs:
     displayName: Download working dir
     artifact: ${{ parameters.artifact }}
-    patterns: "**/@(bin|obj)/**"
+    patterns: |
+      "**/@(bin|obj)/**"
+      "packages/**"
     path: $(System.DefaultWorkingDirectory)

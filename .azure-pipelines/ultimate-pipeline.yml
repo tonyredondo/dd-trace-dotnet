@@ -21,6 +21,7 @@ variables:
   ddApiKey: $(DD_API_KEY)
   isMainBranch: $[eq(variables['Build.SourceBranch'], 'refs/heads/master')]
   DD_DOTNET_TRACER_MSBUILD:
+  NugetPackageDirectory: $(System.DefaultWorkingDirectory)/packages
 
 # Declare the datadog agent as a resource to be used as a pipeline service
 resources:
