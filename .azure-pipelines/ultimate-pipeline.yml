@@ -35,10 +35,10 @@ resources:
 
 # Stages
 stages:
-- stage: build
+- stage: build_managed # todo: rename
   dependsOn: []
   jobs:
-  - job: build_managed # todo: rename
+  - job: windows
     pool:
       vmImage: windows-2019
     steps:
@@ -92,6 +92,8 @@ stages:
     ##   displayName: Upload Windows tracer home zip
     ##   artifact: windows-tracer-home
 
+- stage: build_linux
+    dependsOn: []
   - job: build_native_linux
     dependsOn: build_managed # The native build relies on Datadog.Trace.ClrProfiler.Managed.Loader to be built
     pool:
@@ -170,6 +172,7 @@ stages:
     - publish: $(System.DefaultWorkingDirectory)/src/Datadog.Trace.ClrProfiler.Native/bin/Release/x64
       artifact: build-linux-tracer-home-arm64
 
+- stage: build_macos
   - job: build_native_macos
     dependsOn: build_managed # The native build relies on Datadog.Trace.ClrProfiler.Managed.Loader to be built
     pool:
@@ -190,6 +193,41 @@ stages:
     - publish: $(System.DefaultWorkingDirectory)/src/Datadog.Trace.ClrProfiler.Native/bin
       displayName: Uploading macos profiler artifact
       artifact: build-macos-tracer-home
+
+- stage: package_windows
+  dependsOn: build_managed
+  pool:
+    vmImage: windows-2019
+  jobs:
+  - job: msi_and_pack
+    steps:
+      - template: steps/install-dotnet-5-sdk.yml
+      - template: steps/restore-working-directory.yml
+
+      - script: build.cmd BuildMsi --skip
+        displayName: Build MSI
+
+      - script: build.cmd ZipTracerHome --skip
+        displayName: ZIP Tracer home directory
+
+      - script: build.cmd PackNuGet --skip
+        displayName: Create NuGet packages
+
+      - publish: $(artifacts)/tracer-home.zip
+        displayName: Publish tracer-home.zip
+        artifact: tracer-home.zip
+
+      - publish: $(artifacts)/x86/en-us
+        displayName: Publish Windows x86 MSI
+        artifact: windows-msi-x86
+
+      - publish: $(artifacts)/x64/en-us
+        displayName: Publish Windows x64 MSI
+        artifact: windows-msi-x64
+
+      - publish: $(artifacts)/nuget
+        displayName: Publish NuGet packages
+        artifact: nuget-packages
 
 - stage: unit_tests
   dependsOn: build
