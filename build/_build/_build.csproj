@@ -19,8 +19,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="..\..\.azure-pipelines\steps">
-      <Link>ci\steps</Link>
-    </Folder>
+    <Content Include="..\..\.azure-pipelines\ultimate-pipeline.yml" Link="ci\ultimate-pipeline.yml" />
+    <Content Include="..\..\.azure-pipelines\steps\install-dotnet.yml" Link="ci\steps\install-dotnet.yml" />
+    <Content Include="..\..\.azure-pipelines\steps\install-dotnet-sdks.yml" Link="ci\steps\install-dotnet-sdks.yml" />
+    <Content Include="..\..\.azure-pipelines\steps\install-dotnet-5-sdk.yml" Link="ci\steps\install-dotnet-5-sdk.yml" />
+    <Content Include="..\..\.azure-pipelines\steps\restore-working-directory.yml" Link="ci\steps\restore-working-directory.yml" />
   </ItemGroup>
 </Project>

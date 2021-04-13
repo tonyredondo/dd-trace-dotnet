@@ -1,0 +1,12 @@
+parameters:
+  - name: 'artifact'  # defaults for any parameters that aren't specified
+    type: 'string'
+    default: 'build-managed'
+
+steps:
+- task: DownloadPipelineArtifact@2
+  inputs:
+    displayName: Download working dir
+    artifact: ${{ parameters.name }}
+    patterns: "**/@(bin|obj)/**"
+    path: $(System.DefaultWorkingDirectory)
