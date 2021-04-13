@@ -286,10 +286,10 @@ stages:
     - template: steps/install-dotnet.yml
     - template: steps/restore-working-directory.yml
 
-    - script: build.cmd CompileManagedUnitTests --skip
+    - script: build.sh CompileManagedUnitTests --skip
       displayName: Compile Managed Unit Tests
 
-    - script: build.cmd RunManagedUnitTests --skip
+    - script: build.sh RunManagedUnitTests --skip
       displayName: Run managed unit tests
 
 - stage: integration_tests_windows
