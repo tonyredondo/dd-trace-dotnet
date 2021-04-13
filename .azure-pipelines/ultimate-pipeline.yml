@@ -93,9 +93,9 @@ stages:
     ##   artifact: windows-tracer-home
 
 - stage: build_linux
-    dependsOn: []
+  dependsOn: build_managed # The native build relies on Datadog.Trace.ClrProfiler.Managed.Loader to be built
+  jobs:
   - job: build_native_linux
-    dependsOn: build_managed # The native build relies on Datadog.Trace.ClrProfiler.Managed.Loader to be built
     pool:
       vmImage: ubuntu-20.04
     steps:
@@ -122,7 +122,6 @@ stages:
       artifact: linux-packages
 
   - job: build_native_alpine_linux
-    dependsOn: build_managed # The native build relies on Datadog.Trace.ClrProfiler.Managed.Loader to be built
     pool:
       vmImage: ubuntu-20.04
     steps:
@@ -149,7 +148,6 @@ stages:
       artifact: linux-alpine-packages
 
   - job: build_native_linux_arm64
-    dependsOn: build_managed # The native build relies on Datadog.Trace.ClrProfiler.Managed.Loader to be built
     pool: Arm64
     workspace:
       clean: all
@@ -173,8 +171,9 @@ stages:
       artifact: build-linux-tracer-home-arm64
 
 - stage: build_macos
+  dependsOn: build_managed # The native build relies on Datadog.Trace.ClrProfiler.Managed.Loader to be built
+  jobs:
   - job: build_native_macos
-    dependsOn: build_managed # The native build relies on Datadog.Trace.ClrProfiler.Managed.Loader to be built
     pool:
       vmImage: macOS-10.15
     steps:
@@ -233,7 +232,7 @@ stages:
   dependsOn: build_managed
   pool:
     vmImage: windows-2019
-    jobs:
+  jobs:
     - job: managed
       steps:
       - template: steps/install-dotnet.yml
@@ -341,8 +340,8 @@ stages:
       env:
         DD_SERVICE: dd-trace-dotnet
 
-- stage: integration_tests
-  dependsOn: build
+- stage: integration_tests_windows
+  dependsOn: build_managed
   jobs:
 
   - job: Windows
@@ -426,6 +425,9 @@ stages:
         projects: test/Datadog.Trace.ClrProfiler.IntegrationTests/Datadog.Trace.ClrProfiler.IntegrationTests.csproj
         arguments: -c $(buildConfiguration) --filter "(RunOnWindows=True|Category=Smoke)&LoadFromGAC!=True&IIS!=True" -p:Platform=$(buildPlatform)
 
+- stage: integration_tests_windows_iis
+  dependsOn: [build_managed, package_windows]
+  jobs:
   - job: Windows_IIS
     timeoutInMinutes: 100
     strategy:
@@ -548,6 +550,9 @@ stages:
         dockerComposeCommand: down
       condition: succeededOrFailed()
 
+- stage: integration_tests_linux
+  dependsOn: build_linux
+  jobs:
   - job: Linux
     strategy:
       matrix:
@@ -750,7 +755,7 @@ stages:
       condition: succeededOrFailed()
 
 - stage: benchmarks
-  dependsOn: build
+  dependsOn: build_managed
   condition: and(succeeded(), false)
   jobs:
 
@@ -803,7 +808,7 @@ stages:
         script: 'Start-Sleep -s 120'
 
 - stage: dotnet_tool
-  dependsOn: build
+  dependsOn: [build_managed, build_linux, build_macos]
   jobs:
   - job: build_runner_tool_and_standalone
 
@@ -963,7 +968,7 @@ stages:
       artifact: runner-dotnet-tool
 
 - stage: upload
-  dependsOn: build
+  dependsOn: [package_windows, build_linux]
   jobs:
   - job: s3_upload
 
@@ -1052,7 +1057,7 @@ stages:
         )
 
 - stage: throughput
-  dependsOn: build
+  dependsOn: [build_linux]
   condition: and(succeeded(), false)
   jobs:
 
