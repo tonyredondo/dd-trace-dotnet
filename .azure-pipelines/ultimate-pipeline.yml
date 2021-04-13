@@ -229,14 +229,45 @@ stages:
         displayName: Publish NuGet packages
         artifact: nuget-packages
 
+- stage: unit_tests_windows
+  dependsOn: build_managed
+  pool:
+    vmImage: windows-2019
+    jobs:
+    - job: managed
+      steps:
+      - template: steps/install-dotnet.yml
+      - template: steps/restore-working-directory.yml
+
+      - script: build.cmd CompileManagedUnitTests --skip
+        displayName: Compile Managed Unit Tests
+
+      - script: build.cmd RunManagedUnitTests --skip
+        displayName: Run managed unit tests
+
+    - job: native
+      steps:
+      - template: steps/install-dotnet.yml
+      - template: steps/restore-working-directory.yml
+
+      - script: build.cmd CompileNativeTestsWindows --skip
+        displayName: Compile Native Unit tests
+
+      - script: build.cmd RunNativeTestsWindows --skip
+        displayName: Run Native Unit tests
+
+      - task: PublishTestResults@2
+        displayName: publish test results
+        inputs:
+          testResultsFiles: test/**/test*.xml
+        condition: succeededOrFailed()
+
 - stage: unit_tests
-  dependsOn: build
+  dependsOn: [build_linux, build_macos]
   jobs:
   - job: unit_tests_managed
     strategy:
       matrix:
-        windows:
-          imageName: windows-2019
         linux:
           imageName: ubuntu-18.04
         macos:
@@ -309,63 +340,6 @@ stages:
         projects: test/**/*.Tests.csproj
       env:
         DD_SERVICE: dd-trace-dotnet
-
-  - job: native_unit_tests_windows
-    pool:
-      vmImage: windows-2019
-
-    steps:
-    - checkout: none
-
-    - task: DownloadPipelineArtifact@2
-      inputs:
-        artifact: build-managed
-        path: $(System.DefaultWorkingDirectory)
-
-    # Install the .NET SDK so any managed libraries needed for the C++ unit tests can be built
-    - template: steps/install-dotnet.yml
-
-    # This should already be accounted for but unfortunately it is not
-    - task: DotNetCoreCLI@2
-      displayName: dotnet build
-      inputs:
-        command: build
-        arguments: --configuration $(buildConfiguration) /nowarn:netsdk1138
-        projects: |
-          test/**/Samples.ExampleLibrary*.csproj
-
-    - task: MSBuild@1
-      displayName: Build x86 native unit test projects
-      inputs:
-        solution: Datadog.Trace.proj
-        platform: x86
-        configuration: $(buildConfiguration)
-        msbuildArguments: /t:BuildCppTests
-        maximumCpuCount: true
-
-    - task: MSBuild@1
-      displayName: Build x64 native unit test projects
-      inputs:
-        solution: Datadog.Trace.proj
-        platform: x64
-        configuration: $(buildConfiguration)
-        msbuildArguments: /t:BuildCppTests
-        maximumCpuCount: true
-
-    - script: Datadog.Trace.ClrProfiler.Native.Tests.exe --gtest_output=xml
-      displayName: run tests
-      workingDirectory: $(System.DefaultWorkingDirectory)/test/Datadog.Trace.ClrProfiler.Native.Tests/bin/$(buildConfiguration)/x86
-
-    - script: Datadog.Trace.ClrProfiler.Native.Tests.exe --gtest_output=xml
-      displayName: run tests
-      workingDirectory: $(System.DefaultWorkingDirectory)/test/Datadog.Trace.ClrProfiler.Native.Tests/bin/$(buildConfiguration)/x64
-      condition: succeededOrFailed()
-
-    - task: PublishTestResults@2
-      displayName: publish test results
-      inputs:
-        testResultsFiles: test/**/test*.xml
-      condition: succeededOrFailed()
 
 - stage: integration_tests
   dependsOn: build
