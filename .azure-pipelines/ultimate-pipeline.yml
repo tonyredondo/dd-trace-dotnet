@@ -97,10 +97,12 @@ stages:
     pool:
       vmImage: ubuntu-20.04
     steps:
-    - download: current
-      displayName: Download working dir
-      artifact: build-managed
-      patterns: "**/@(bin|obj)"
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        displayName: Download working dir
+        artifact: build-managed
+        patterns: "**/@(bin|obj)/**"
+        path: $(System.DefaultWorkingDirectory)
 
     - task: DockerCompose@0
       displayName: docker-compose run Profiler
