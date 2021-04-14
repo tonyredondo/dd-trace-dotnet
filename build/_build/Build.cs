@@ -448,7 +448,7 @@ partial class Build : NukeBuild
             DotNetMSBuild(s => s
                 .SetTargetPath(MsBuildProject)
                 .DisableRestore()
-                // .EnableNoDependencies()
+                .EnableNoDependencies()
                 .SetConfiguration(Configuration)
                 .SetTargetPlatform(Platform)
                 .SetTargets("BuildFrameworkReproductions")
@@ -465,7 +465,7 @@ partial class Build : NukeBuild
             DotNetMSBuild(s => s
                 .SetTargetPath(MsBuildProject)
                 .DisableRestore()
-                // .EnableNoDependencies()
+                .EnableNoDependencies()
                 .SetConfiguration(Configuration)
                 .SetTargetPlatform(Platform)
                 .SetProperty("ManagedProfilerOutputDirectory", TracerHomeDirectory)
@@ -488,7 +488,7 @@ partial class Build : NukeBuild
             DotNetBuild(config => config
                 .SetConfiguration(Configuration)
                 .SetTargetPlatform(Platform)
-                // .EnableNoDependencies()
+                .EnableNoDependencies()
                 .SetProperty("BuildInParallel", "false")
                 .SetProperty("ManagedProfilerOutputDirectory", TracerHomeDirectory)
                 .SetProperty("ExcludeManagedProfiler", true)

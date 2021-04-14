@@ -187,8 +187,6 @@ partial class Build
         .Unlisted()
         .Executes(() =>
         {
-            DockerTasks.DockerLogger = CustomDockerLogger;
-
             // Using the docker folder as the build context so it's nice and quick
             // but we can always change that if we need it later
             DockerTasks.DockerBuild(c => c
@@ -198,13 +196,12 @@ partial class Build
                 .SetBuildArg($"DOTNETSDK_VERSION={DotNetSdkVersion}"));
         });
 
+
     Target RunInDockerLinux => _ => _
         .Description("Executes the provided Nuke target in Docker (Ubuntu)")
         .DependsOn(BuildDockerLinuxImage)
         .Executes(() =>
         {
-            DockerTasks.DockerLogger = CustomDockerLogger;
-
             var additionalArgs = CommandLineArguments
                 .AsEnumerable()
                 .SkipWhile(x => !string.Equals(x, nameof(RunInDockerLinux), StringComparison.OrdinalIgnoreCase))
@@ -220,17 +217,4 @@ partial class Build
                 .SetProcessArgumentConfigurator(
                     arg => arg.Add($"dotnet /project/build/_build/bin/Debug/_build.dll {args}")));
         });
-
-    void CustomDockerLogger(OutputType outputType, string message)
-    {
-        // Docker writes to StdErr a lot, which is a pain
-        if (outputType == OutputType.Err && message.StartsWith("Error", StringComparison.OrdinalIgnoreCase))
-        {
-            Logger.Error(message);
-        }
-        else
-        {
-            Logger.Normal(message);
-        }
-    }
 }

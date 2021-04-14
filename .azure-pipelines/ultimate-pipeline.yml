@@ -311,20 +311,35 @@ stages:
     - template: steps/install-dotnet-sdks.yml
     - template: steps/restore-working-directory.yml
 
+    - script: build.cmd CompileDependencyLibs --skip
+      displayName: Build dependency libraries
+
+    - script: build.cmd CompileManagedUnitTests --skip
+      displayName: Compile Managed Unit Tests (has dependencies of integration tests)
+
+    # The integration tests are built for x86/x64 specifically
+    # which means they either need to rebuild all their dependencies,
+    # or we use this hack
+    - script: build.cmd CopyPlatformlessBuildOutput --skip
+      displayName: Copy AnyCPU libs to x86/x64 folders
+
+    - script: build.cmd CompileRegressionDependencyLibs --skip
+      displayName: Build regression dependency libraries
+
+    - script: build.cmd CompileRegressionSamples --skip
+      displayName: Build regression dependency libraries
+
     - script: build.cmd CompileFrameworkReproductions --skip
       displayName: Build .NET Framework projects (non SDK-based projects)
-
-    - script: build.cmd CompileIntegrationTests --skip
-      displayName: Build integration tests
 
     - script: build.cmd CompileSamples --skip
       displayName: Build samples
 
-    - script: build.cmd CompileRegressionSamples --skip
-      displayName: Build regression samples
+    - script: build.cmd CompileIntegrationTests --skip
+      displayName: Build integration tests
 
     - publish: $(System.DefaultWorkingDirectory)
-      displayName: Upload working directory after the managed build
+      displayName: DEBUG Upload working directory after the managed build
       artifact: build-integration-tests-windows-$(buildPlatform)
 
     - script: build.cmd RunIntegrationTests --skip
@@ -350,59 +365,29 @@ stages:
 
     steps:
 
-    - checkout: none
-
-    - task: DownloadPipelineArtifact@2
-      inputs:
-        artifact: build-managed
-        path: $(System.DefaultWorkingDirectory)
-
     - template: steps/install-dotnet-sdks.yml
+    - template: steps/restore-working-directory.yml
 
-    - task: NuGetToolInstaller@1
-      displayName: install nuget
+    - script: build.cmd CompileDependencyLibs --skip
+      displayName: Build dependency libraries
 
-    - task: NuGetCommand@2
-      displayName: nuget restore
-      inputs:
-        restoreSolution: Datadog.Trace.sln
-        verbosityRestore: Normal
+    - script: build.cmd CompileManagedUnitTests --skip
+      displayName: Compile Managed Unit Tests (has dependencies of integration tests)
 
-    - task: MSBuild@1
-      displayName: Build .NET Framework projects (not SDK-based projects)
-      inputs:
-        solution: Datadog.Trace.proj
-        platform: $(buildPlatform)
-        configuration: $(buildConfiguration)
-        msbuildArguments: /t:BuildFrameworkReproductions
-        maximumCpuCount: true
+      # The integration tests are built for x86/x64 specifically
+      # which means they either need to rebuild all their dependencies,
+      # or we use this hack
+    - script: build.cmd CopyPlatformlessBuildOutput --skip
+      displayName: Copy AnyCPU libs to x86/x64 folders
 
-    - task: DotNetCoreCLI@2
-      displayName: dotnet build integration tests
-      inputs:
-        command: build
-        projects: |
-          test/test-applications/regression/**/*.csproj
-          test/*.IntegrationTests/*.IntegrationTests.csproj
-          !test/test-applications/regression/**/ExpenseItDemo*.csproj
-          !test/test-applications/regression/**/EntityFramework6x*.csproj
-          !test/test-applications/regression/**/StackExchange.Redis.AssemblyConflict.LegacyProject.csproj
-        arguments: --configuration $(buildConfiguration) -p:Platform=$(buildPlatform) -p:ManagedProfilerOutputDirectory=$(tracerHome) /nowarn:netsdk1138
+    - script: build.cmd CompileRegressionDependencyLibs --skip
+      displayName: Build regression dependency libraries
 
-    - task: DotNetCoreCLI@2
-      displayName: dotnet build samples
-      inputs:
-        command: build
-        projects: |
-          test/test-applications/integrations/**/*.csproj
-          !test/test-applications/integrations/dependency-libs/**/*.csproj
-        arguments: --configuration $(buildConfiguration) -p:Platform=$(buildPlatform) -p:ManagedProfilerOutputDirectory=$(tracerHome) -p:BuildInParallel=false /nowarn:netsdk1138 -p:ExcludeManagedProfiler=true -p:ExcludeNativeProfiler=true -p:LoadManagedProfilerFromProfilerDirectory=false
+    - script: build.cmd CompileRegressionSamples --skip
+      displayName: Build regression dependency libraries
 
-    - task: NuGetCommand@2
-      displayName: nuget restore IIS samples
-      inputs:
-        restoreSolution: test/test-applications/aspnet/samples-iis.sln
-        verbosityRestore: Normal
+    - script: build.cmd CompileFrameworkReproductions --skip
+      displayName: Build .NET Framework projects (non SDK-based projects)
 
     - task: MSBuild@1
       displayName: Publish IIS samples
