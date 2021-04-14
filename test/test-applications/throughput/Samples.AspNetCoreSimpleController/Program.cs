@@ -16,6 +16,24 @@ namespace Samples.AspNetCoreSimpleController
         {
             Console.WriteLine(typeof(Datadog.Trace.ClrProfiler.Instrumentation).Assembly.FullName);
             Console.WriteLine();
+            Console.WriteLine("Environment Variables:");
+            Console.WriteLine();
+
+            List<KeyValuePair<string, string>> lstKeyValue = new List<KeyValuePair<string, string>>();
+
+            foreach (DictionaryEntry item in Environment.GetEnvironmentVariables())
+            {
+                lstKeyValue.Add(new KeyValuePair<string, string>(item.Key?.ToString(), item.Value?.ToString()));
+            }
+
+            foreach (KeyValuePair<string, string> item in lstKeyValue.OrderBy(i => i.Key))
+            {
+                Console.WriteLine($"   {item.Key}={item.Value}");
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("Running...");
+            Console.WriteLine();
             CreateHostBuilder(args).Build().Run();
         }
 
