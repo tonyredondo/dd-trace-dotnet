@@ -443,9 +443,12 @@ partial class Build : NukeBuild
         .DependsOn(CompileRegressionDependencyLibs)
         .DependsOn(CompileDependencyLibs)
         .DependsOn(CopyPlatformlessBuildOutput)
+        .Requires(() => IsWin) 
         .Executes(() =>
         {
-            DotNetMSBuild(s => s
+            // We have to use the full MSBuild here, as dotnet msbuild doesn't copy the EDMX assets for embedding correctly
+            // seems similar to https://github.com/dotnet/sdk/issues/8360
+            MSBuild(s => s
                 .SetTargetPath(MsBuildProject)
                 .DisableRestore()
                 .EnableNoDependencies()

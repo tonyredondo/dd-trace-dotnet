@@ -58,7 +58,8 @@ internal static class DotNetSettingsExtensions
         return settings;
     }
     
-    public static DotNetMSBuildSettings EnableNoDependencies(this DotNetMSBuildSettings settings)
+    public static T EnableNoDependencies<T>(this T settings)
+        where T: MSBuildSettings
     {
         return settings.SetProperty("BuildProjectReferences", false);
     }
