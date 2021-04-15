@@ -129,7 +129,10 @@ jobs:
 
   - script: |
       sudo apt-get update
-      sudo apt-get install -y git wget curl cmake make llvm clang gcc
+      sudo apt-get install -y git wget curl make llvm clang gcc
+      apt-get remove -y cmake && \
+      curl -o /tmp/cmake.sh https://github.com/Kitware/CMake/releases/download/v3.16.3/cmake-3.16.3-Linux-x86_64.sh && \
+      sh /tmp/cmake.sh --prefix=/usr/local --exclude-subdir --skip-license
     displayName: install_dependencies
 
   - script: |
