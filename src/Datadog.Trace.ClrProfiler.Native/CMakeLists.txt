@@ -262,7 +262,6 @@ else()
     add_library("Datadog.Trace.ClrProfiler.Native" SHARED
         dllmain.cpp
         interop.cpp
-        ${GENERATED_OBJ_FILES}
     )
 endif()
 
