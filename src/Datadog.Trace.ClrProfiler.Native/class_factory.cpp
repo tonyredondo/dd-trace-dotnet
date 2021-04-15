@@ -6,6 +6,7 @@
 #include "cor_profiler.h"
 #include "logging.h"
 #include "version.h"
+#include <iostream>
 
 ClassFactory::ClassFactory() : refCount(0) {}
 
@@ -14,11 +15,13 @@ ClassFactory::~ClassFactory() {}
 HRESULT STDMETHODCALLTYPE ClassFactory::QueryInterface(REFIID riid,
                                                        void** ppvObject) {
   if (riid == IID_IUnknown || riid == IID_IClassFactory) {
+    std::cout << "Interface found." << std::endl;
     *ppvObject = this;
     this->AddRef();
     return S_OK;
   }
 
+  std::cout << "Interface not found." << std::endl;
   *ppvObject = nullptr;
   return E_NOINTERFACE;
 }
@@ -40,7 +43,10 @@ ULONG STDMETHODCALLTYPE ClassFactory::Release() {
 HRESULT STDMETHODCALLTYPE ClassFactory::CreateInstance(IUnknown* pUnkOuter,
                                                        REFIID riid,
                                                        void** ppvObject) {
+  std::cout << "Creating profiler instance." << std::endl;
+
   if (pUnkOuter != nullptr) {
+    std::cout << "Class doesn't support aggregations." << std::endl;
     *ppvObject = nullptr;
     return CLASS_E_NOAGGREGATION;
   }
@@ -68,7 +74,9 @@ HRESULT STDMETHODCALLTYPE ClassFactory::CreateInstance(IUnknown* pUnkOuter,
   );
   trace::Debug("ClassFactory::CreateInstance");
 
+  std::cout << "Initializing profiler." << std::endl;
   auto profiler = new trace::CorProfiler();
+  std::cout << "Querying interface." << std::endl;
   return profiler->QueryInterface(riid, ppvObject);
 }
 

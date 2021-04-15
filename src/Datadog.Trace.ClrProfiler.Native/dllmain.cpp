@@ -4,6 +4,7 @@
 
 #include "dllmain.h"
 #include "class_factory.h"
+#include <iostream>
 
 const IID IID_IUnknown = {0x00000000,
                           0x0000,
@@ -34,16 +35,23 @@ HRESULT STDMETHODCALLTYPE DllGetClassObject(REFCLSID rclsid, REFIID riid,
       0x4b07,
       {0x96, 0x9e, 0x5, 0xc2, 0x6b, 0xc0, 0x60, 0xd8}};
 
+  std::cout << "Checking CLSID." << std::endl;
+
   if (ppv == NULL || rclsid != CLSID_CorProfiler) {
+    std::cout << "Failed." << std::endl;
     return E_FAIL;
   }
+
+  std::cout << "Creating factory." << std::endl;
 
   auto factory = new ClassFactory;
 
   if (factory == NULL) {
+    std::cout << "Failed." << std::endl;
     return E_FAIL;
   }
 
+  std::cout << "Querying interface." << std::endl;
   return factory->QueryInterface(riid, ppv);
 }
 
