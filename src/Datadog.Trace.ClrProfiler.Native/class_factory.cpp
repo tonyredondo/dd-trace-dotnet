@@ -76,7 +76,7 @@ HRESULT STDMETHODCALLTYPE ClassFactory::CreateInstance(IUnknown* pUnkOuter,
 
   std::cout << "Initializing profiler." << std::endl;
   auto profiler = new trace::CorProfiler();
-  std::cout << "Querying interface." << std::endl;
+  std::cout << "Querying interface from profiler instance." << std::endl;
   return profiler->QueryInterface(riid, ppvObject);
 }
 

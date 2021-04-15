@@ -34,6 +34,8 @@ CorProfiler* profiler = nullptr;
 //
 HRESULT STDMETHODCALLTYPE
 CorProfiler::Initialize(IUnknown* cor_profiler_info_unknown) {
+  std::cout << "CorProfiler Initialize." << std::endl;
+
   // check if debug mode is enabled
   const auto debug_enabled_value =
       GetEnvironmentValue(environment::debug_enabled);
@@ -43,7 +45,7 @@ CorProfiler::Initialize(IUnknown* cor_profiler_info_unknown) {
   }
 
   // check if dump il rewrite is enabled
-  const auto dump_il_rewrite_enabled_value = 
+  const auto dump_il_rewrite_enabled_value =
       GetEnvironmentValue(environment::dump_il_rewrite_enabled);
 
   if (dump_il_rewrite_enabled_value == WStr("1") ||
@@ -197,7 +199,7 @@ CorProfiler::Initialize(IUnknown* cor_profiler_info_unknown) {
   } else {
     Info("CallTarget instrumentation is disabled.");
   }
-  
+
   if (!EnableInlining(is_calltarget_enabled)) {
     Info("JIT Inlining is disabled.");
     event_mask |= COR_PRF_DISABLE_INLINING;
@@ -261,6 +263,7 @@ CorProfiler::Initialize(IUnknown* cor_profiler_info_unknown) {
   opcodes_names.push_back("->"); // CEE_SWITCH_ARG
 
   // we're in!
+  std::cout << "Profiler attached." << std::endl;
   Info("Profiler attached.");
   this->info_->AddRef();
   is_attached_.store(true);
@@ -394,10 +397,10 @@ HRESULT STDMETHODCALLTYPE CorProfiler::ModuleLoadFinished(ModuleID module_id,
        module_info.assembly.name == WStr("System.Private.CoreLib"))) {
     corlib_module_loaded = true;
     corlib_app_domain_id = app_domain_id;
-    
+
     ComPtr<IUnknown> metadata_interfaces;
     auto hr = this->info_->GetModuleMetaData(module_id, ofRead | ofWrite, IID_IMetaDataImport2, metadata_interfaces.GetAddressOf());
-    
+
     // Get the IMetaDataAssemblyImport interface to get metadata from the
     // managed assembly
     const auto assembly_import = metadata_interfaces.As<IMetaDataAssemblyImport>(IID_IMetaDataAssemblyImport);
@@ -774,7 +777,7 @@ HRESULT STDMETHODCALLTYPE CorProfiler::JITCompilationStarted(
   return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE CorProfiler::JITInlining(FunctionID callerId, 
+HRESULT STDMETHODCALLTYPE CorProfiler::JITInlining(FunctionID callerId,
     FunctionID calleeId, BOOL* pfShouldInline) {
   if (!is_attached_) {
     return S_OK;
@@ -804,7 +807,7 @@ HRESULT STDMETHODCALLTYPE CorProfiler::JITInlining(FunctionID callerId,
            ", MethodDef=", TokenStr(&calleFunctionToken), "]");
       *pfShouldInline = false;
       return S_OK;
-    } 
+    }
   }
 
   return S_OK;
@@ -1026,7 +1029,7 @@ HRESULT CorProfiler::ProcessReplacementCalls(
       auto generated_wrapper_method_ref = GetWrapperMethodRef(module_metadata,
                                                               module_id,
                                                               method_replacement,
-                                                              wrapper_method_ref, 
+                                                              wrapper_method_ref,
                                                               wrapper_type_ref);
       if (!generated_wrapper_method_ref) {
         Warn(
@@ -1387,7 +1390,7 @@ HRESULT CorProfiler::ProcessInsertionCalls(
     auto generated_wrapper_method_ref = GetWrapperMethodRef(module_metadata,
                                                             module_id,
                                                             method_replacement,
-                                                            wrapper_method_ref, 
+                                                            wrapper_method_ref,
                                                             wrapper_type_ref);
     if (!generated_wrapper_method_ref) {
       Warn(
@@ -1535,7 +1538,7 @@ std::string CorProfiler::GetILCodes(const std::string& title, ILRewriter* rewrit
     if (SUCCEEDED(hr)) {
       orig_sstream << std::endl
                    << ". Local Var Signature: "
-                   << ToString(HexStr(originalSignature, originalSignatureSize)) 
+                   << ToString(HexStr(originalSignature, originalSignatureSize))
                    << std::endl;
     }
   }
@@ -1543,7 +1546,7 @@ std::string CorProfiler::GetILCodes(const std::string& title, ILRewriter* rewrit
   orig_sstream << std::endl;
   for (ILInstr* cInstr = rewriter->GetILList()->m_pNext;
        cInstr != rewriter->GetILList(); cInstr = cInstr->m_pNext) {
-    
+
     if (ehCount > 0) {
       for (unsigned int i = 0; i < ehCount; i++) {
         const auto currentEH = ehPtr[i];
@@ -1632,7 +1635,7 @@ std::string CorProfiler::GetILCodes(const std::string& title, ILRewriter* rewrit
           orig_sstream << "()";
         }
       } else if (cInstr->m_opcode == CEE_CASTCLASS || cInstr->m_opcode == CEE_BOX ||
-          cInstr->m_opcode == CEE_UNBOX_ANY || cInstr->m_opcode == CEE_NEWARR || 
+          cInstr->m_opcode == CEE_UNBOX_ANY || cInstr->m_opcode == CEE_NEWARR ||
           cInstr->m_opcode == CEE_INITOBJ) {
         const auto typeInfo = GetTypeInfo(module_metadata->metadata_import,
                                       (mdTypeRef)cInstr->m_Arg32);
@@ -1781,10 +1784,10 @@ HRESULT CorProfiler::GenerateVoidILStartupMethod(const ModuleID module_id,
       ELEMENT_TYPE_I4
   };
   mdFieldDef isAssemblyLoadedFieldToken;
-  hr = metadata_emit->DefineField(new_type_def, 
+  hr = metadata_emit->DefineField(new_type_def,
                           WStr("_isAssemblyLoaded"),
-                          fdStatic | fdPrivate, 
-                          field_signature, 
+                          fdStatic | fdPrivate,
+                          field_signature,
                           sizeof(field_signature),
                           0,
                           nullptr,
@@ -1846,7 +1849,7 @@ HRESULT CorProfiler::GenerateVoidILStartupMethod(const ModuleID module_id,
   // Add IL instructions into the IsAlreadyLoaded method
   //
   //  static int _isAssemblyLoaded = 0;
-  //  
+  //
   //  public static bool IsAlreadyLoaded() {
   //      return Interlocked.CompareExchange(ref _isAssemblyLoaded, 1, 0) == 1;
   //  }
@@ -1862,7 +1865,7 @@ HRESULT CorProfiler::GenerateVoidILStartupMethod(const ModuleID module_id,
   pALNewInstr->m_opcode = CEE_LDSFLDA;
   pALNewInstr->m_Arg32 = isAssemblyLoadedFieldToken;
   rewriter_already_loaded.InsertBefore(pALFirstInstr, pALNewInstr);
-  
+
   // ldc.i4.1 : Load the constant 1 (int) to the stack
   pALNewInstr = rewriter_already_loaded.NewILInstr();
   pALNewInstr->m_opcode = CEE_LDC_I4_1;
@@ -1893,7 +1896,7 @@ HRESULT CorProfiler::GenerateVoidILStartupMethod(const ModuleID module_id,
   pALNewInstr = rewriter_already_loaded.NewILInstr();
   pALNewInstr->m_opcode = CEE_RET;
   rewriter_already_loaded.InsertBefore(pALFirstInstr, pALNewInstr);
-  
+
   hr = rewriter_already_loaded.Export();
   if (FAILED(hr)) {
     Warn(
@@ -2218,7 +2221,7 @@ Debug("GenerateVoidILStartupMethod: Linux: Setting the PInvoke native profiler l
   pNewInstr->m_opcode = CEE_BRFALSE_S;
   rewriter_void.InsertBefore(pFirstInstr, pNewInstr);
   ILInstr* pBranchFalseInstr = pNewInstr;
-  
+
   // return if IsAlreadyLoaded is true
   pNewInstr = rewriter_void.NewILInstr();
   pNewInstr->m_opcode = CEE_RET;
@@ -2496,7 +2499,7 @@ HRESULT CorProfiler::AddIISPreStartInitFlags(
   mdMemberRef appdomain_get_current_domain_member_ref;
   hr = metadata_emit->DefineMemberRef(
       system_appdomain_type_ref, WStr("get_CurrentDomain"),
-      appdomain_get_current_domain_signature, 
+      appdomain_get_current_domain_signature,
       appdomain_get_current_domain_signature_length,
       &appdomain_get_current_domain_member_ref);
 
@@ -2692,7 +2695,7 @@ HRESULT STDMETHODCALLTYPE CorProfiler::GetReJITParameters(ModuleID moduleId, mdM
 
   Debug("GetReJITParameters: [moduleId: ", moduleId, ", methodId: ", methodId, "]");
 
-  // we get the module_metadata from the moduleId. 
+  // we get the module_metadata from the moduleId.
   ModuleMetadata* module_metadata = nullptr;
   {
     std::lock_guard<std::mutex> guard(module_id_to_info_map_lock_);
@@ -2833,16 +2836,16 @@ size_t CorProfiler::CallTarget_RequestRejitForModule(ModuleID module_id, ModuleM
       // Store module_id and methodDef to request the ReJIT after analyzing all integrations.
       vtModules.push_back(module_id);
       vtMethodDefs.push_back(methodDef);
-      
+
       bool caller_assembly_is_domain_neutral = runtime_information_.is_desktop() && corlib_module_loaded && module_metadata->app_domain_id == corlib_app_domain_id;
 
       Info("Enqueue for ReJIT [ModuleId=", module_id,
-           ", MethodDef=", TokenStr(&methodDef), 
+           ", MethodDef=", TokenStr(&methodDef),
            ", AppDomainId=", module_metadata->app_domain_id,
            ", IsDomainNeutral=", caller_assembly_is_domain_neutral,
-           ", Assembly=", module_metadata->assemblyName, 
-           ", Type=", caller.type.name, 
-           ", Method=", caller.name, 
+           ", Assembly=", module_metadata->assemblyName,
+           ", Type=", caller.type.name,
+           ", Method=", caller.name,
            ", Signature=", caller.signature.str(),
            "]");
       enumIterator = ++enumIterator;
@@ -2861,7 +2864,7 @@ size_t CorProfiler::CallTarget_RequestRejitForModule(ModuleID module_id, ModuleM
 /// <summary>
 /// Rewrite the target method body with the calltarget implementation. (This is function is triggered by the ReJIT handler)
 /// Resulting code structure:
-/// 
+///
 /// - Add locals for TReturn (if non-void method), CallTargetState, CallTargetReturn/CallTargetReturn<TReturn>, Exception
 /// - Initialize locals
 ///
@@ -2930,11 +2933,11 @@ HRESULT CorProfiler::CallTarget_RewriterCallback(RejitHandlerModule* moduleHandl
   mdTypeRef wrapper_type_ref = mdTypeRefNil;
   GetWrapperMethodRef(module_metadata, module_id, *method_replacement, wrapper_method_ref, wrapper_type_ref);
 
-  Debug("*** CallTarget_RewriterCallback() Start: ", caller->type.name, ".", caller->name, 
-       "() [IsVoid=", isVoid, 
-       ", IsStatic=", isStatic, 
+  Debug("*** CallTarget_RewriterCallback() Start: ", caller->type.name, ".", caller->name,
+       "() [IsVoid=", isVoid,
+       ", IsStatic=", isStatic,
        ", IntegrationType=", method_replacement->wrapper_method.type_name,
-       ", Arguments=", numArgs, 
+       ", Arguments=", numArgs,
        "]");
 
   // *** Create rewriter
@@ -2967,9 +2970,9 @@ HRESULT CorProfiler::CallTarget_RewriterCallback(RejitHandlerModule* moduleHandl
   mdToken exceptionToken = mdTokenNil;
   mdToken callTargetReturnToken = mdTokenNil;
   ILInstr* firstInstruction;
-  callTargetTokens->ModifyLocalSigAndInitialize(&reWriterWrapper, caller, 
-      &callTargetStateIndex, &exceptionIndex, 
-      &callTargetReturnIndex, &returnValueIndex, 
+  callTargetTokens->ModifyLocalSigAndInitialize(&reWriterWrapper, caller,
+      &callTargetStateIndex, &exceptionIndex,
+      &callTargetReturnIndex, &returnValueIndex,
       &callTargetStateToken,
       &exceptionToken, &callTargetReturnToken, &firstInstruction);
 
@@ -2980,7 +2983,7 @@ HRESULT CorProfiler::CallTarget_RewriterCallback(RejitHandlerModule* moduleHandl
   // *** Load instance into the stack (if not static)
   if (isStatic) {
     if (caller->type.valueType) {
-      // Static methods in a ValueType can't be instrumented. 
+      // Static methods in a ValueType can't be instrumented.
       // In the future this can be supported by adding a local for the valuetype and initialize it to the default value.
       // After the signature modification we need to emit the following IL to initialize and load into the stack.
       //    ldloca.s [localIndex]
@@ -2995,12 +2998,12 @@ HRESULT CorProfiler::CallTarget_RewriterCallback(RejitHandlerModule* moduleHandl
     if (caller->type.valueType) {
       if (caller->type.type_spec != mdTypeSpecNil) {
         reWriterWrapper.LoadObj(caller->type.type_spec);
-      } 
+      }
       else if (!caller->type.isGeneric) {
         reWriterWrapper.LoadObj(caller->type.id);
       } else {
         // Generic struct instrumentation is not supported
-        // IMetaDataImport::GetMemberProps and IMetaDataImport::GetMemberRefProps returns 
+        // IMetaDataImport::GetMemberProps and IMetaDataImport::GetMemberRefProps returns
         // The parent token as mdTypeDef and not as a mdTypeSpec
         // that's because the method definition is stored in the mdTypeDef
         // The problem is that we don't have the exact Spec of that generic
@@ -3089,7 +3092,7 @@ HRESULT CorProfiler::CallTarget_RewriterCallback(RejitHandlerModule* moduleHandl
   methodReturnInstr->m_opcode = CEE_RET;
   rewriter.InsertAfter(rewriter.GetILList()->m_pPrev, methodReturnInstr);
   reWriterWrapper.SetILPosition(methodReturnInstr);
-  
+
   // ***
   // EXCEPTION CATCH
   // ***
@@ -3128,7 +3131,7 @@ HRESULT CorProfiler::CallTarget_RewriterCallback(RejitHandlerModule* moduleHandl
         reWriterWrapper.LoadObj(caller->type.id);
       } else {
         // Generic struct instrumentation is not supported
-        // IMetaDataImport::GetMemberProps and IMetaDataImport::GetMemberRefProps returns 
+        // IMetaDataImport::GetMemberProps and IMetaDataImport::GetMemberRefProps returns
         // The parent token as mdTypeDef and not as a mdTypeSpec
         // that's because the method definition is stored in the mdTypeDef
         // The problem is that we don't have the exact Spec of that generic
@@ -3147,7 +3150,7 @@ HRESULT CorProfiler::CallTarget_RewriterCallback(RejitHandlerModule* moduleHandl
 
   reWriterWrapper.LoadLocal(exceptionIndex);
   reWriterWrapper.LoadLocal(callTargetStateIndex);
-  
+
   ILInstr* endMethodCallInstr;
   if (isVoid) {
     callTargetTokens->WriteEndVoidReturnMemberRef(
@@ -3249,7 +3252,7 @@ HRESULT CorProfiler::CallTarget_RewriterCallback(RejitHandlerModule* moduleHandl
   newEHClauses[ehCount - 2] = exClause;
   newEHClauses[ehCount - 1] = finallyClause;
   rewriter.SetEHClause(newEHClauses, ehCount);
-  
+
   if (dump_il_rewrite_enabled) {
     Info(original_code);
     Info(GetILCodes("*** CallTarget_RewriterCallback(): Modified Code: ",

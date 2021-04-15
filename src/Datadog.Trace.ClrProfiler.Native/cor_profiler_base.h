@@ -200,13 +200,13 @@ class CorProfilerBase : public ICorProfilerCallback8 {
         riid == __uuidof(ICorProfilerCallback3) ||
         riid == __uuidof(ICorProfilerCallback2) ||
         riid == __uuidof(ICorProfilerCallback) || riid == IID_IUnknown) {
-      std::cout << "Interface found." << std::endl;
+      std::cout << "ICorProfilerCallbackX Interface found." << std::endl;
       *ppvObject = this;
       this->AddRef();
       return S_OK;
     }
 
-    std::cout << "Interface not found." << std::endl;
+    std::cout << "ICorProfilerCallbackX Interface not found." << std::endl;
     *ppvObject = nullptr;
     return E_NOINTERFACE;
   }
