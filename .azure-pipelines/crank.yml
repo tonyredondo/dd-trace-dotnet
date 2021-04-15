@@ -92,7 +92,7 @@ jobs:
     displayName: install dotnet core sdk 5
     inputs:
       packageType: sdk
-      version: $(dotnetCoreSdk5Version)
+      version: 5.0.103
       includePreviewVersions: true
 
   - task: DotNetCoreCLI@2
