@@ -9,6 +9,12 @@ PUBLISH_OUTPUT_NET2="$( pwd )/src/bin/managed-publish/netstandard2.0"
 PUBLISH_OUTPUT_NET31="$( pwd )/src/bin/managed-publish/netcoreapp3.1"
 BUILD_TYPE=${buildConfiguration:-Debug}
 
+ld --version
+make --version
+cmake --version
+clang --version
+gcc --version
+
 cd src/Datadog.Trace.ClrProfiler.Native
 mkdir -p build
 (cd build && cmake ../ -DCMAKE_BUILD_TYPE=${BUILD_TYPE} && make)

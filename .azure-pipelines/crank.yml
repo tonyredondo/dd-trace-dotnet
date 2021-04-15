@@ -133,6 +133,11 @@ jobs:
     displayName: install_dependencies
 
   - script: |
+      ld --version
+      make --version
+      cmake --version
+      clang --version
+      gcc --version
       export CXX=clang++
       export CC=clang
       cd ./src/Datadog.Trace.ClrProfiler.Native
