@@ -37,7 +37,6 @@ scenarios:
         COR_ENABLE_PROFILING: 1
         CORECLR_ENABLE_PROFILING: 1
         DD_TRACE_CALLTARGET_ENABLED: 0
-        DD_CLR_ENABLE_INLINING: 0
     load:
       job: bombardier
       variables:
@@ -53,7 +52,6 @@ scenarios:
         COR_ENABLE_PROFILING: 1
         CORECLR_ENABLE_PROFILING: 1
         DD_TRACE_CALLTARGET_ENABLED: 1
-        DD_CLR_ENABLE_INLINING: 1
     load:
       job: bombardier
       variables:
@@ -79,7 +77,6 @@ profiles:
           DD_DOTNET_TRACER_HOME: "{{ windowsProfilerPath }}"
           DD_INTEGRATIONS: "{{ windowsProfilerPath }}\\integrations.json"
           DD_AGENT_HOST: "{{ controllerIp }}"
-          DD_TRACE_DEBUG: 0
         options:
           requiredOperatingSystem: windows
           buildFiles:
@@ -105,7 +102,6 @@ profiles:
           DD_DOTNET_TRACER_HOME: "{{ linuxProfilerPath }}"
           DD_INTEGRATIONS: "{{ linuxProfilerPath }}/integrations.json"
           DD_AGENT_HOST: "{{ controllerIp }}"
-          DD_TRACE_DEBUG: 0
         options:
           requiredOperatingSystem: linux
           buildFiles:

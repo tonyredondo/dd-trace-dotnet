@@ -140,6 +140,7 @@ jobs:
       cd build
       cmake ../ -DCMAKE_BUILD_TYPE=Release
       make
+      ll ./bin
     displayName: build_profiler
 
   - publish: $(System.DefaultWorkingDirectory)/src/Datadog.Trace.ClrProfiler.Native/build/bin
