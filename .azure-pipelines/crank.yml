@@ -129,9 +129,7 @@ jobs:
 
   - script: |
       sudo apt-get update
-      sudo apt-get install -y git wget curl
-      sudo apt-get install -y cmake=3.16.3
-      sudo apt-get install -y make llvm clang gcc
+      sudo apt-get install -y git wget curl cmake make llvm clang gcc
     displayName: install_dependencies
 
   - script: |
