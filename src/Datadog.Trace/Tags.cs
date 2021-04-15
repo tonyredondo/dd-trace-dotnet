@@ -215,6 +215,21 @@ namespace Datadog.Trace
         public const string MessageSize = "message.size";
 
         /// <summary>
+        /// The partition associated with a record
+        /// </summary>
+        public const string Partition = "partition";
+
+        /// <summary>
+        /// The offset inside a partition associated with a record
+        /// </summary>
+        public const string Offset = "offset";
+
+        /// <summary>
+        /// The length of time a record has been on the queue
+        /// </summary>
+        public const string RecordQueueTimeMs = "record.queue_time_ms";
+
+        /// <summary>
         /// The sampling priority for the entire trace.
         /// </summary>
         public const string SamplingPriority = "sampling.priority";
