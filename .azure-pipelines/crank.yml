@@ -25,6 +25,11 @@ schedules:
     - /benchmarks/*
   always: true
 
+variables:
+  buildConfiguration: Release
+  publishOutput: $(System.DefaultWorkingDirectory)/src/bin/managed-publish
+  dotnetCoreSdk5Version: 5.0.103
+
 jobs:
 
 
@@ -92,7 +97,7 @@ jobs:
     displayName: install dotnet core sdk 5
     inputs:
       packageType: sdk
-      version: 5.0.103
+      version: $(dotnetCoreSdk5Version)
       includePreviewVersions: true
 
   - task: DotNetCoreCLI@2
@@ -100,7 +105,27 @@ jobs:
     inputs:
       command: build
       projects: src/Datadog.Trace.ClrProfiler.Managed.Loader/Datadog.Trace.ClrProfiler.Managed.Loader.csproj
-      arguments: --configuration Release /nowarn:netsdk1138
+      arguments: --configuration $(buildConfiguration) /nowarn:netsdk1138
+
+  - task: DotNetCoreCLI@2
+    displayName: dotnet publish Datadog.Trace.ClrProfiler.Managed 2.0
+    inputs:
+      command: publish
+      publishWebProjects: false
+      modifyOutputPath: false
+      zipAfterPublish: false
+      projects: src/Datadog.Trace.ClrProfiler.Managed/Datadog.Trace.ClrProfiler.Managed.csproj
+      arguments: --configuration $(buildConfiguration) --framework netstandard2.0 --output $(publishOutput)/netstandard2.0
+
+  - task: DotNetCoreCLI@2
+    displayName: dotnet publish Datadog.Trace.ClrProfiler.Managed 3.1
+    inputs:
+      command: publish
+      publishWebProjects: false
+      modifyOutputPath: false
+      zipAfterPublish: false
+      projects: src/Datadog.Trace.ClrProfiler.Managed/Datadog.Trace.ClrProfiler.Managed.csproj
+      arguments: --configuration $(buildConfiguration) --framework netcoreapp3.1 --output $(publishOutput)/netcoreapp3.1
 
   - script: |
       sudo apt-get update
