@@ -107,26 +107,6 @@ jobs:
       projects: src/Datadog.Trace.ClrProfiler.Managed.Loader/Datadog.Trace.ClrProfiler.Managed.Loader.csproj
       arguments: --configuration $(buildConfiguration) /nowarn:netsdk1138
 
-  - task: DotNetCoreCLI@2
-    displayName: dotnet publish Datadog.Trace.ClrProfiler.Managed 2.0
-    inputs:
-      command: publish
-      publishWebProjects: false
-      modifyOutputPath: false
-      zipAfterPublish: false
-      projects: src/Datadog.Trace.ClrProfiler.Managed/Datadog.Trace.ClrProfiler.Managed.csproj
-      arguments: --configuration $(buildConfiguration) --framework netstandard2.0 --output $(publishOutput)/netstandard2.0
-
-  - task: DotNetCoreCLI@2
-    displayName: dotnet publish Datadog.Trace.ClrProfiler.Managed 3.1
-    inputs:
-      command: publish
-      publishWebProjects: false
-      modifyOutputPath: false
-      zipAfterPublish: false
-      projects: src/Datadog.Trace.ClrProfiler.Managed/Datadog.Trace.ClrProfiler.Managed.csproj
-      arguments: --configuration $(buildConfiguration) --framework netcoreapp3.1 --output $(publishOutput)/netcoreapp3.1
-
   - script: |
       sudo apt-get update
       sudo apt-get install -y git wget curl make llvm clang gcc
@@ -136,11 +116,6 @@ jobs:
     displayName: install_dependencies
 
   - script: |
-      ld --version
-      make --version
-      cmake --version
-      clang --version
-      gcc --version
       export CXX=clang++
       export CC=clang
       cd ./src/Datadog.Trace.ClrProfiler.Native
