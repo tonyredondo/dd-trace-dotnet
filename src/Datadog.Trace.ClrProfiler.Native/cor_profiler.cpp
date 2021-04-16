@@ -2754,12 +2754,13 @@ size_t CorProfiler::CallTarget_RequestRejitForModule(ModuleID module_id, ModuleM
       continue;
     }
 
-    // We are in the right module, so we try to load the mdTypeDef from the integration target type name.
+    // We are in the right module, try and find the typeDef (account for nested classes)
     mdTypeDef typeDef = mdTypeDefNil;
-    auto hr = metadata_import->FindTypeDefByName(integration.replacement.target_method.type_name.c_str(), mdTokenNil, &typeDef);
-    if (FAILED(hr)) {
-      // This can happen between .NET framework and .NET core, not all apis are available in both. Eg: WinHttpHandler, CurlHandler, and some methods in System.Data
-      Debug("Can't load the TypeDef for: ", integration.replacement.target_method.type_name, ", Module: ", module_metadata->assemblyName);
+    auto foundType = FindTypeDefByName(
+        integration.replacement.target_method.type_name,
+        module_metadata->assemblyName, metadata_import, typeDef);
+    
+    if (!foundType) {
       continue;
     }
 
@@ -2786,7 +2787,7 @@ size_t CorProfiler::CallTarget_RequestRejitForModule(ModuleID module_id, ModuleM
 
       // We create a new function info into the heap from the caller functionInfo in the stack, to be used later in the ReJIT process
       auto functionInfo = new FunctionInfo(caller);
-      hr = functionInfo->method_signature.TryParse();
+      auto hr = functionInfo->method_signature.TryParse();
       if (FAILED(hr)) {
         Warn("The method signature: ", functionInfo->method_signature.str(), " cannot be parsed.");
         delete functionInfo;
