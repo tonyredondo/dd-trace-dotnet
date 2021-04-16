@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading;
 using Datadog.Trace.ClrProfiler.CallTarget;
+using Datadog.Trace.DuckTyping;
+using Datadog.Trace.Tagging;
 
 namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
 {
@@ -38,8 +40,6 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
                 return new CallTargetState(scope);
             }
 
-            // TODO: create a custom IDeliveryHandler to intercept a (successful) delivery result (to record offset etc)?
-
             return CallTargetState.GetDefault();
         }
 
@@ -54,7 +54,31 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
         /// <param name="state">Calltarget state value</param>
         /// <returns>A response value, in an async scenario will be T of Task of T</returns>
         public static TResponse OnAsyncMethodEnd<TTarget, TResponse>(TTarget instance, TResponse response, Exception exception, CallTargetState state)
+        where TResponse : IDeliveryResult
         {
+            if (state.Scope?.Span?.Tags is KafkaTags tags)
+            {
+                IDeliveryResult deliveryResult = null;
+                if (exception is not null)
+                {
+                    var produceException = exception.DuckAs<IProduceException>();
+                    if (produceException is not null)
+                    {
+                        deliveryResult = produceException.DeliveryResult;
+                    }
+                }
+                else if (response is not null)
+                {
+                    deliveryResult = response;
+                }
+
+                if (deliveryResult is not null)
+                {
+                    tags.Partition = deliveryResult.Partition.ToString();
+                    tags.Offset = deliveryResult.Offset.ToString();
+                }
+            }
+
             state.Scope?.DisposeWithException(exception);
             return response;
         }

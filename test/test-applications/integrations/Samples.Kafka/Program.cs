@@ -45,6 +45,16 @@ namespace Samples.Kafka
 
             await Producer.ProduceAsync(topic, numberOfMessagesPerProducer, config);
 
+            // try to produce an invalid message
+            try
+            {
+                await Producer.ProduceAsync("INVALID-TOPIC", 1, config);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error producing a message to an unknown topic (expected): {ex}");
+            }
+
             // Wait for all messages to be consumed
             // This assumes that the topic starts empty, and nothing else is producing to the topic
             var deadline = DateTime.UtcNow.AddSeconds(30);
@@ -52,7 +62,7 @@ namespace Samples.Kafka
             {
                 var syncCount = Volatile.Read(ref Consumer.TotalSyncMessages);
                 var asyncCount = Volatile.Read(ref Consumer.TotalAsyncMessages);
-                if (syncCount == numberOfMessagesPerProducer && asyncCount == numberOfMessagesPerProducer)
+                if (syncCount >= numberOfMessagesPerProducer && asyncCount >= numberOfMessagesPerProducer)
                 {
                     Console.WriteLine($"All messages produced and consumed");
                     break;

@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Datadog.Core.Tools;
 using Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka;
@@ -12,6 +13,11 @@ namespace Datadog.Trace.ClrProfiler.IntegrationTests
     [Collection(nameof(KafkaTestsCollection))]
     public class KafkaTests : TestHelper
     {
+        private const int ExpectedSuccessProducerSpans = 20;
+        private const int ExpectedErrorProducerSpans = 1;
+        private const int ExpectedConsumerSpans = 0;
+        private const int TotalExpectedSpanCount = ExpectedConsumerSpans + ExpectedSuccessProducerSpans + ExpectedErrorProducerSpans;
+
         public KafkaTests(ITestOutputHelper output)
             : base("Kafka", output)
         {
@@ -32,18 +38,28 @@ namespace Datadog.Trace.ClrProfiler.IntegrationTests
 
             processResult.ExitCode.Should().BeGreaterOrEqualTo(0);
 
-            const int expectedProducerSpans = 20;
-            const int expectedConsumerSpans = 0; // 20;
-            const int totalCount = expectedConsumerSpans + expectedProducerSpans;
-            var allSpans = agent.WaitForSpans(totalCount, timeoutInMilliseconds: 10_000);
+            var allSpans = agent.WaitForSpans(TotalExpectedSpanCount, timeoutInMilliseconds: 10_000);
+            allSpans.Should().HaveCount(TotalExpectedSpanCount);
 
-            allSpans.Should().HaveCount(totalCount);
+            var allProducerSpans = allSpans.Where(x => x.Name == "kafka.produce").ToList();
+            var successfulProducerSpans = allProducerSpans.Where(x => x.Error == 0).ToList();
+            var errorProducerSpans = allProducerSpans.Where(x => x.Error > 0).ToList();
 
-            var producerSpans = allSpans.Where(x => x.Name == "kafka.produce").ToList();
+            VerifyProducerSpanProperties(successfulProducerSpans, "sample-topic-netcoreapp3_1", ExpectedSuccessProducerSpans);
+            VerifyProducerSpanProperties(errorProducerSpans, "INVALID-TOPIC", ExpectedErrorProducerSpans);
+
+            // verify have error
+            errorProducerSpans.Should()
+                              .OnlyContain(x => x.Tags.ContainsKey(Tags.ErrorType))
+                              .And.OnlyContain(x => x.Tags[Tags.ErrorType] == "Confluent.Kafka.ProduceException`2[System.String,System.String]");
+        }
+
+        private void VerifyProducerSpanProperties(List<MockTracerAgent.Span> producerSpans, string topic, int expectedCount)
+        {
             producerSpans.Should()
-                         .HaveCount(expectedProducerSpans)
+                         .HaveCount(expectedCount)
                          .And.OnlyContain(x => x.Service == "Samples.Kafka-kafka")
-                         .And.OnlyContain(x => x.Resource == "Produce Topic sample-topic-netcoreapp3_1");
+                         .And.OnlyContain(x => x.Resource == $"Produce Topic {topic}");
 
             // Confirm partition is displayed correctly [0], [1]
             // https://github.com/confluentinc/confluent-kafka-dotnet/blob/master/src/Confluent.Kafka/Partition.cs#L217-L224

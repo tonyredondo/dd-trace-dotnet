@@ -39,12 +39,10 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
                 span.Type = SpanTypes.Queue;
                 span.ResourceName = resourceName;
 
-                var partition = topicPartition?.Partition.ToString();
-
-                if (!string.IsNullOrEmpty(partition))
-                {
-                    tags.Partition = partition;
-                }
+                // Record the partition we're trying to send it to
+                // This is generally not set, but _can_ be
+                // it will be updated on successful delivery
+                tags.Partition = topicPartition?.Partition.ToString();
 
                 tags.SetAnalyticsSampleRate(KafkaConstants.IntegrationId, tracer.Settings, enabledWithGlobalSetting: false);
             }
