@@ -5,7 +5,6 @@
 
     <!-- override to remove net452 -->
     <TargetFrameworks Condition="'$(OS)' == 'Windows_NT'">net461</TargetFrameworks>
-    <TargetFrameworks Condition="$(MSBuildVersion) &gt;= 16.8.0 AND !$(TargetFrameworks.Contains('net5.0'))">$(TargetFrameworks)</TargetFrameworks>
 
     <!-- Required to build multiple projects with the same Configuration|Platform -->
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
