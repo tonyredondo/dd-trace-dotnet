@@ -258,11 +258,13 @@ if (ISMACOS)
         interop.cpp
         ${GENERATED_OBJ_FILES}
     )
+    set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-undefined-error")
 else()
     add_library("Datadog.Trace.ClrProfiler.Native" SHARED
         dllmain.cpp
         interop.cpp
     )
+    set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--no-undefined")
 endif()
 
 set_target_properties("Datadog.Trace.ClrProfiler.Native" PROPERTIES PREFIX "")
