@@ -13,7 +13,7 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
         AssemblyName = "Confluent.Kafka",
         TypeName = "Confluent.Kafka.Producer`2",
         MethodName = "ProduceAsync",
-        ReturnTypeName = KafkaConstants.TaskDeliveryResult,
+        ReturnTypeName = KafkaConstants.TaskDeliveryReportTypeName,
         ParameterTypeNames = new[] { KafkaConstants.TopicPartitionTypeName, KafkaConstants.MessageTypeName, ClrNames.CancellationToken },
         MinimumVersion = "1.0.0",
         MaximumVersion = "1.*.*",

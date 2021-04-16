@@ -11,7 +11,7 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
         TypeName = "Confluent.Kafka.Producer`2",
         MethodName = "Produce",
         ReturnTypeName = ClrNames.Void,
-        ParameterTypeNames = new[] { KafkaConstants.TopicPartitionTypeName, KafkaConstants.MessageTypeName, KafkaConstants.ActionOfDeliveryHandlerTypeName },
+        ParameterTypeNames = new[] { KafkaConstants.TopicPartitionTypeName, KafkaConstants.MessageTypeName, KafkaConstants.ActionOfDeliveryReportTypeName },
         MinimumVersion = "1.0.0",
         MaximumVersion = "1.*.*",
         IntegrationName = KafkaConstants.IntegrationName)]
@@ -32,13 +32,13 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
         public static CallTargetState OnMethodBegin<TTarget, TTopicPartition, TMessage, TDeliveryHandler>(TTarget instance, TTopicPartition topicPartition, TMessage message, TDeliveryHandler deliveryHandler)
             where TTopicPartition : ITopicPartition
         {
-            Scope scope = KafkaHelper.CreateProduceScope(Tracer.Instance, topicPartition);
-            if (scope is not null)
-            {
-                return new CallTargetState(scope);
-            }
-
-            // TODO: create a custom IDeliveryHandler to intercept a (successful) delivery result (to record offset etc)?
+            // Scope scope = KafkaHelper.CreateProduceScope(Tracer.Instance, topicPartition);
+            // if (scope is not null)
+            // {
+            //     return new CallTargetState(scope);
+            // }
+            //
+            // // TODO: create a custom IDeliveryHandler to intercept a (successful) delivery result (to record offset etc)?
 
             return CallTargetState.GetDefault();
         }
@@ -53,7 +53,7 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
         /// <returns>A response value, in an async scenario will be T of Task of T</returns>
         public static CallTargetReturn OnMethodEnd<TTarget>(TTarget instance, Exception exception, CallTargetState state)
         {
-            state.Scope?.DisposeWithException(exception);
+            // state.Scope?.DisposeWithException(exception);
             return CallTargetReturn.GetDefault();
         }
     }

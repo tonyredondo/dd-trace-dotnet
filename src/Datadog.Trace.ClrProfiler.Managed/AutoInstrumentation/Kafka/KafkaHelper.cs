@@ -10,9 +10,29 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
 
         internal static Scope CreateProduceScope(Tracer tracer, ITopicPartition topicPartition)
         {
+            Scope scope = null;
+
+            try
+            {
+                var span = CreateProduceSpan(tracer, topicPartition?.Topic);
+                if (span is not null)
+                {
+                    scope = tracer.ActivateSpan(span);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error creating or populating scope.");
+            }
+
+            return scope;
+        }
+
+        internal static Span CreateProduceSpan(Tracer tracer, string topic)
+        {
             if (!Tracer.Instance.Settings.IsIntegrationEnabled(KafkaConstants.IntegrationId))
             {
-                // integration disabled, don't create a scope, skip this trace
+                // integration disabled, don't create a scope/span, skip this trace
                 return null;
             }
 
@@ -25,33 +45,27 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
             }
 
             string serviceName = tracer.Settings.GetServiceName(tracer, KafkaConstants.ServiceName);
-            Scope scope = null;
+            Span span = null;
 
             try
             {
                 var tags = new KafkaTags(SpanKinds.Producer);
 
-                scope = tracer.StartActiveWithTags(KafkaConstants.ProduceOperationName, serviceName: serviceName, tags: tags);
-                string topic = topicPartition?.Topic ?? "kafka";
-                string resourceName = $"Produce Topic {topic}";
+                span = tracer.StartSpan(KafkaConstants.ProduceOperationName, tags, serviceName: serviceName);
 
-                var span = scope.Span;
+                string resourceName = $"Produce Topic {(string.IsNullOrEmpty(topic) ? "kafka" : topic)}";
+
                 span.Type = SpanTypes.Queue;
                 span.ResourceName = resourceName;
-
-                // Record the partition we're trying to send it to
-                // This is generally not set, but _can_ be
-                // it will be updated on successful delivery
-                tags.Partition = topicPartition?.Partition.ToString();
 
                 tags.SetAnalyticsSampleRate(KafkaConstants.IntegrationId, tracer.Settings, enabledWithGlobalSetting: false);
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error creating or populating scope.");
+                Log.Error(ex, "Error creating or populating span.");
             }
 
-            return scope;
+            return span;
         }
     }
 }
