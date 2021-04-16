@@ -3,9 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Nuke.Common;
-using Nuke.Common.CI;
-using Nuke.Common.Execution;
-using Nuke.Common.Git;
 using Nuke.Common.IO;
 using Nuke.Common.ProjectModel;
 using Nuke.Common.Tooling;
@@ -48,7 +45,13 @@ partial class Build : NukeBuild
     
     [Parameter("The location to restore Nuget packages (optional) ")]
     readonly AbsolutePath NugetPackageDirectory;
-    
+
+    [Parameter("Is the build running on Alpine linux? Default is 'false'")]
+    readonly bool IsAlpine = false;
+
+    [Parameter("The build version (for packaging purposes). Default is latest")]
+    readonly string Version = "1.25.2";
+
     [Solution("Datadog.Trace.sln")] readonly Solution Solution;
     [Solution("Datadog.Trace.Native.sln")] readonly Solution NativeSolution;
     AbsolutePath MsBuildProject => RootDirectory / "Datadog.Trace.proj";
@@ -68,12 +71,16 @@ partial class Build : NukeBuild
 
     [LazyPathExecutable(name: "cmake")] readonly Lazy<Tool> CMake;
     [LazyPathExecutable(name: "make")] readonly Lazy<Tool> Make;
-    
+    [LazyPathExecutable(name: "fpm")] readonly Lazy<Tool> Fpm;
+    [LazyPathExecutable(name: "gzip")] readonly Lazy<Tool> GZip;
+
     IEnumerable<MSBuildTargetPlatform> ArchitecturesForPlatform =>
         Equals(Platform, MSBuildTargetPlatform.x64)
             ? new[] {MSBuildTargetPlatform.x64, MSBuildTargetPlatform.x86}
             : new[] {MSBuildTargetPlatform.x86};
-    
+
+    IEnumerable<string> LinuxPackageTypes => IsAlpine ? new[] {"tar"} : new[] {"deb", "rpm", "tar"};
+
     IEnumerable<Project> ProjectsToPack => new []
     {
         Solution.GetProject(Projects.DatadogTrace),
@@ -87,6 +94,7 @@ partial class Build : NukeBuild
         TargetFramework.NETSTANDARD2_0, 
         TargetFramework.NETCOREAPP3_1,
     };
+
 
     Target Clean => _ => _
         .Executes(() =>
@@ -109,6 +117,7 @@ partial class Build : NukeBuild
 
     Target RestoreNuGet => _ => _
         .Unlisted()
+        // .OnlyWhenStatic(() => IsWin)
         .After(Clean)
         .Executes(() =>
         {
@@ -118,16 +127,17 @@ partial class Build : NukeBuild
                 .When(!string.IsNullOrEmpty(NugetPackageDirectory), o =>
                     o.SetPackagesDirectory(NugetPackageDirectory)));
         });
- 
+
     Target RestoreDotNet => _ => _
         .Unlisted()
+        // .OnlyWhenStatic(() => !IsWin)
         .After(Clean)
         .Executes(() =>
         {
             DotNetRestore(s => s
                 .SetProjectFile(Solution)
                 .SetVerbosity(DotNetVerbosity.Normal)
-                .SetTargetPlatform(Platform) // necessary to ensure we restore every project
+                // .SetTargetPlatform(Platform) // necessary to ensure we restore every project
                 .SetProperty("configuration", Configuration.ToString())
                 .When(!string.IsNullOrEmpty(NugetPackageDirectory), o =>
                         o.SetPackageDirectory(NugetPackageDirectory)));
@@ -279,7 +289,7 @@ partial class Build : NukeBuild
                     .SetFramework(framework)
                     .SetOutput(TracerHomeDirectory / framework)));
         });
-    
+
     Target PublishNativeProfilerWindows => _ => _
         .Unlisted()
         .OnlyWhenStatic(() => IsWin)
@@ -295,21 +305,38 @@ partial class Build : NukeBuild
                 CopyFileToDirectory(source, dest, FileExistsPolicy.OverwriteIfNewer);
             }
         });
-    
+
     Target PublishNativeProfilerLinux => _ => _
         .Unlisted()
         .OnlyWhenStatic(() => IsLinux)
         .DependsOn(CompileNativeSrcLinux)
         .Executes(() =>
         {
-            // TODO: Linux: x64, arm64; alpine: x64
+            // TODO: Invert this, so it copies _from the bin folder instead of _into_ it
+            // leaving this as-is for now to match existing pipeline
             foreach (var architecture in new []{ MSBuildTargetPlatform.x64})
             {
-                var source = NativeProfilerProject.Directory / "bin" / Configuration / architecture.ToString() /
-                             $"{NativeProfilerProject.Name}.so";
-                var dest = TracerHomeDirectory / $"linux-{architecture}";
-                Logger.Info($"Copying '{source}' to '{dest}'");
-                CopyFileToDirectory(source, dest, FileExistsPolicy.OverwriteIfNewer);
+                var outputDir = NativeProfilerProject.Directory / "build" / "bin" / Configuration /
+                                architecture.ToString();
+
+                EnsureCleanDirectory(outputDir);
+                // copy static files
+                CopyFileToDirectory(RootDirectory / "integrations.json", outputDir, FileExistsPolicy.Overwrite);
+                CopyFileToDirectory(RootDirectory / "build" / "artifacts" / "createLogPath.sh", outputDir, FileExistsPolicy.Overwrite);
+
+                // copy native file
+                var buildOutputDirectory = NativeProfilerProject.Directory / "build" / "bin";
+                CopyFileToDirectory(buildOutputDirectory / $"{NativeProfilerProject.Name}.so", outputDir);
+
+                // Copy managed files
+                foreach (var framework in new []{TargetFramework.NETSTANDARD2_0, TargetFramework.NETCOREAPP3_1})
+                {
+                    EnsureCleanDirectory(outputDir / framework);
+                    CopyDirectoryRecursively(
+                        source: TracerHomeDirectory / framework,
+                        target: outputDir / framework,
+                        DirectoryExistsPolicy.Merge);
+                }
             }
         });
 
@@ -339,7 +366,7 @@ partial class Build : NukeBuild
             Logger.Info($"Copying '{source}' to '{dest}'");
             CopyFileToDirectory(source, dest, FileExistsPolicy.OverwriteIfNewer);
         });
-    
+
     Target CompileManagedUnitTests => _ => _
         .DependsOn(Restore)
         .DependsOn(CompileManagedSrc)
@@ -353,7 +380,7 @@ partial class Build : NukeBuild
                 .SetProperty("BuildProjectReferences", false)
                 .SetTargets("BuildCsharpUnitTests"));
         });
-    
+
     Target RunManagedUnitTests => _ => _
         .DependsOn(CompileManagedUnitTests)
         .Executes(() =>
@@ -443,7 +470,7 @@ partial class Build : NukeBuild
         .DependsOn(CompileRegressionDependencyLibs)
         .DependsOn(CompileDependencyLibs)
         .DependsOn(CopyPlatformlessBuildOutput)
-        .Requires(() => IsWin) 
+        .Requires(() => IsWin)
         .Executes(() =>
         {
             // We have to use the full MSBuild here, as dotnet msbuild doesn't copy the EDMX assets for embedding correctly
@@ -457,7 +484,7 @@ partial class Build : NukeBuild
                 .SetTargets("BuildFrameworkReproductions")
                 .SetMaxCpuCount(null));
         });
-    
+
     Target CompileIntegrationTests => _ => _
         .DependsOn(CompileManagedSrc)
         .DependsOn(CompileRegressionSamples)
@@ -475,7 +502,7 @@ partial class Build : NukeBuild
                 .SetTargets("BuildCsharpIntegrationTests")
                 .SetMaxCpuCount(null));
         });
-    
+
     Target CompileSamples => _ => _
         .DependsOn(CompileDependencyLibs)
         .DependsOn(CopyPlatformlessBuildOutput)
@@ -509,13 +536,61 @@ partial class Build : NukeBuild
         .DependsOn(PublishNativeProfilerLinux)
         .DependsOn(PublishNativeProfilerMacOs)
         .DependsOn(CopyIntegrationsJson);
-    
+
     Target ZipTracerHome => _ => _
         .Unlisted()
         .DependsOn(BuildTracerHome)
+        .Requires(() => Version)
         .Executes(() =>
         {
-            CompressZip(TracerHomeDirectory, TracerHomeZip, fileMode: FileMode.Create);
+            if (IsWin)
+            {
+                CompressZip(TracerHomeDirectory, TracerHomeZip, fileMode: FileMode.Create);
+            }
+            else if (IsLinux)
+            {
+                var fpm = Fpm.Value;
+                var gzip = GZip.Value;
+                var packageName = "datadog-dotnet-apm";
+
+                foreach (var architecture in new[] { MSBuildTargetPlatform.x64 })
+                {
+                    var workingDirectory = ArtifactsDirectory / $"linux-{architecture}";
+                    EnsureCleanDirectory(workingDirectory);
+
+                    var publishDir = NativeProfilerProject.Directory / "build" / "bin" / Configuration /
+                                     architecture.ToString();
+                    foreach (var packageType in LinuxPackageTypes)
+                    {
+                        var args = new []
+                        {
+                            "-f",
+                            "-s dir",
+                            $"-t {packageType}",
+                            $"-n {packageName}",
+                            $"-v {Version}",
+                            packageType == "tar" ? "--prefix /opt/datadog" : "",
+                            $"--chdir {publishDir}",
+                            "netstandard2.0/",
+                            "netcoreapp3.1/",
+                            "Datadog.Trace.ClrProfiler.Native.so",
+                            "integrations.json",
+                            "createLogPath.sh",
+                        };
+                        var arguments = string.Join(" ", args);
+                        fpm(arguments, workingDirectory: workingDirectory);
+                    }
+
+                    gzip($"-f {packageName}.tar", workingDirectory: workingDirectory);
+
+                    var versionedName = IsAlpine
+                        ? $"{packageName}-{Version}-musl.tar.gz"
+                        : $"{packageName}-{Version}.tar.gz";
+                    RenameFile(
+                        workingDirectory / $"{packageName}.tar.gz",
+                        workingDirectory / versionedName);
+                }
+            }
         });
 
     Target BuildMsi => _ => _
@@ -681,8 +756,8 @@ partial class Build : NukeBuild
             .DependsOn(CompileManagedUnitTests)
             .DependsOn(RunManagedUnitTests);
 
-    /// <summary>  
-    /// Run the default build 
-    /// </summary> 
+    /// <summary>
+    /// Run the default build
+    /// </summary>
     public static int Main() => Execute<Build>(x => x.LocalBuild);
 }

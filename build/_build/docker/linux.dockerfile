@@ -4,14 +4,6 @@ FROM mcr.microsoft.com/dotnet/sdk:$DOTNETSDK_VERSION-buster-slim
 # ubuntu image
 # FROM mcr.microsoft.com/dotnet/sdk:$DOTNETSDK_VERSION-focal
 
-
-# Instructions to install latest Mono from
-# https://www.mono-project.com/download/stable/#download-lin-debian
-RUN apt-get update \
-    && apt install -y apt-transport-https dirmngr gnupg ca-certificates \
-    && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF \
-    && echo "deb https://download.mono-project.com/repo/debian stable-buster main" | tee /etc/apt/sources.list.d/mono-official-stable.list
-
 # Instructions to install .NET Core runtimes from
 # https://docs.microsoft.com/en-us/dotnet/core/install/linux-package-manager-debian10
 RUN wget https://packages.microsoft.com/config/debian/10/packages-microsoft-prod.deb -O packages-microsoft-prod.deb \
@@ -33,7 +25,6 @@ RUN apt-get update \
         ruby \
         ruby-dev \
         rubygems \
-        mono-complete \
         apt-transport-https \
         aspnetcore-runtime-2.1 \
         aspnetcore-runtime-3.0 \
@@ -42,5 +33,9 @@ RUN apt-get update \
 
 ENV CXX=clang++
 ENV CC=clang
+
+# Copy the build files in
+COPY . /build
+RUN dotnet build /build
 
 WORKDIR /project
