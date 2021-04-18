@@ -108,7 +108,7 @@ stages:
           --build-arg DOTNETSDK_VERSION=$(dotnetCoreSdk5Version) \
           --tag dd-trace-dotnet/debian-base \
           --file "$(System.DefaultWorkingDirectory)/build/_build/docker/linux.dockerfile" \
-          "$(System.DefaultWorkingDirectory)/build/_build/docker"
+          "$(System.DefaultWorkingDirectory)/build/_build"
       displayName: Build Docker base image
 
     - script: |
@@ -118,7 +118,7 @@ stages:
             --env tracerHome=$(tracerHome)
             --env artifacts=$(artifacts)
             dd-trace-dotnet/debian-base \
-            dotnet run "$(System.DefaultWorkingDirectory)/build/_build" CompileNativeSrcLinux --skip
+            dotnet "$(System.DefaultWorkingDirectory)/build/bin/Debug/_build.dll" CompileNativeSrcLinux --skip
       displayName: Build native profiler
 
     - script: |
