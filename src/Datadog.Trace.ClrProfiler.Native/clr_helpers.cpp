@@ -1643,5 +1643,7 @@ bool FindTypeDefByName(
           ", Module: ", assemblyName);
     return false;
   }
+
+  return true;
 }
 }  // namespace trace
