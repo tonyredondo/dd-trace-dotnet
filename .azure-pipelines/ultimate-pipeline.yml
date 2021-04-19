@@ -118,7 +118,7 @@ stages:
             --env tracerHome=$(tracerHome) \
             --env artifacts=$(artifacts) \
             dd-trace-dotnet/debian-base \
-            dotnet "$(System.DefaultWorkingDirectory)/build/bin/Debug/_build.dll" CompileNativeSrcLinux --skip
+            dotnet /build/bin/Debug/_build.dll CompileNativeSrcLinux --skip
       displayName: Build native profiler
 
     - script: |
@@ -128,7 +128,7 @@ stages:
             --env tracerHome=$(tracerHome) \
             --env artifacts=$(artifacts) \
             dd-trace-dotnet/debian-base \
-            dotnet run "$(System.DefaultWorkingDirectory)/build/_build" PublishNativeProfilerLinux --skip
+            dotnet /build/bin/Debug/_build.dll PublishNativeProfilerLinux --skip
       displayName: Publish native profiler
 
     - script: |
@@ -138,7 +138,7 @@ stages:
             --env tracerHome=$(tracerHome) \
             --env artifacts=$(artifacts) \
             dd-trace-dotnet/debian-base \
-            dotnet run "$(System.DefaultWorkingDirectory)/build/_build" ZipTracerHome --skip
+            dotnet /build/bin/Debug/_build.dll ZipTracerHome --skip
       displayName: Package native profiler
 
     - publish: $(System.DefaultWorkingDirectory)/src/Datadog.Trace.ClrProfiler.Native/bin/Release/x64
