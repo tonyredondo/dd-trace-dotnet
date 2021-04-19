@@ -114,9 +114,9 @@ stages:
     - script: |
         docker run --rm \
             --mount type=bind,source="$(System.DefaultWorkingDirectory)",target=/project \
-            --env NugetPackageDirectory=$(NugetPackageDirectory)
-            --env tracerHome=$(tracerHome)
-            --env artifacts=$(artifacts)
+            --env NugetPackageDirectory=$(NugetPackageDirectory) \
+            --env tracerHome=$(tracerHome) \
+            --env artifacts=$(artifacts) \
             dd-trace-dotnet/debian-base \
             dotnet "$(System.DefaultWorkingDirectory)/build/bin/Debug/_build.dll" CompileNativeSrcLinux --skip
       displayName: Build native profiler
@@ -124,9 +124,9 @@ stages:
     - script: |
         docker run --rm \
             --mount type=bind,source="$(System.DefaultWorkingDirectory)",target=/project \
-            --env NugetPackageDirectory=$(NugetPackageDirectory)
-            --env tracerHome=$(tracerHome)
-            --env artifacts=$(artifacts)
+            --env NugetPackageDirectory=$(NugetPackageDirectory) \
+            --env tracerHome=$(tracerHome) \
+            --env artifacts=$(artifacts) \
             dd-trace-dotnet/debian-base \
             dotnet run "$(System.DefaultWorkingDirectory)/build/_build" PublishNativeProfilerLinux --skip
       displayName: Publish native profiler
@@ -134,9 +134,9 @@ stages:
     - script: |
         docker run --rm \
             --mount type=bind,source="$(System.DefaultWorkingDirectory)",target=/project \
-            --env NugetPackageDirectory=$(NugetPackageDirectory)
-            --env tracerHome=$(tracerHome)
-            --env artifacts=$(artifacts)
+            --env NugetPackageDirectory=$(NugetPackageDirectory) \
+            --env tracerHome=$(tracerHome) \
+            --env artifacts=$(artifacts) \
             dd-trace-dotnet/debian-base \
             dotnet run "$(System.DefaultWorkingDirectory)/build/_build" ZipTracerHome --skip
       displayName: Package native profiler
