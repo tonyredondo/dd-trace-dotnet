@@ -17,12 +17,15 @@ pr:
 variables:
   buildConfiguration: Release
   dotnetCoreSdk5Version: 5.0.103
+  relativeTracerHome: /src/bin/windows-tracer-home
+  relativeArtifacts: /src/bin/artifacts
   tracerHome: $(System.DefaultWorkingDirectory)/src/bin/windows-tracer-home
   artifacts: $(System.DefaultWorkingDirectory)/src/bin/artifacts
   ddApiKey: $(DD_API_KEY)
   isMainBranch: $[eq(variables['Build.SourceBranch'], 'refs/heads/master')]
   DD_DOTNET_TRACER_MSBUILD:
   NugetPackageDirectory: $(System.DefaultWorkingDirectory)/packages
+  relativeNugetPackageDirectory: packages
 
 # Declare the datadog agent as a resource to be used as a pipeline service
 resources:
@@ -109,10 +112,6 @@ stages:
         artifact: build-windows-tracer-home
         path: $(tracerHome)
 
-    - publish: $(System.DefaultWorkingDirectory)
-      displayName: DEBUG Uploading linux tracer home artifact
-      artifact: build-linux-tracer-home-DEBUG
-
     - script: |
         docker build \
           --build-arg DOTNETSDK_VERSION=$(dotnetCoreSdk5Version) \
@@ -124,9 +123,9 @@ stages:
     - script: |
         docker run --rm \
             --mount type=bind,source="$(System.DefaultWorkingDirectory)",target=/project \
-            --env NugetPackageDirectory=$(NugetPackageDirectory) \
-            --env tracerHome=$(tracerHome) \
-            --env artifacts=$(artifacts) \
+            --env NugetPackageDirectory=/project/$(relativeNugetPackageDirectory) \
+            --env tracerHome=/project/$(relativeTracerHome) \
+            --env artifacts=/project/$(relativeArtifacts) \
             dd-trace-dotnet/debian-base \
             dotnet /build/bin/Debug/_build.dll CompileNativeSrcLinux --skip
       displayName: Build native profiler
@@ -134,9 +133,9 @@ stages:
     - script: |
         docker run --rm \
             --mount type=bind,source="$(System.DefaultWorkingDirectory)",target=/project \
-            --env NugetPackageDirectory=$(NugetPackageDirectory) \
-            --env tracerHome=$(tracerHome) \
-            --env artifacts=$(artifacts) \
+            --env NugetPackageDirectory=/project/$(relativeNugetPackageDirectory) \
+            --env tracerHome=/project/$(relativeTracerHome) \
+            --env artifacts=/project/$(relativeArtifacts) \
             dd-trace-dotnet/debian-base \
             dotnet /build/bin/Debug/_build.dll PublishNativeProfilerLinux --skip
       displayName: Publish native profiler
@@ -144,9 +143,9 @@ stages:
     - script: |
         docker run --rm \
             --mount type=bind,source="$(System.DefaultWorkingDirectory)",target=/project \
-            --env NugetPackageDirectory=$(NugetPackageDirectory) \
-            --env tracerHome=$(tracerHome) \
-            --env artifacts=$(artifacts) \
+            --env NugetPackageDirectory=/project/$(relativeNugetPackageDirectory) \
+            --env tracerHome=/project/$(relativeTracerHome) \
+            --env artifacts=/project/$(relativeArtifacts) \
             dd-trace-dotnet/debian-base \
             dotnet /build/bin/Debug/_build.dll ZipTracerHome --skip
       displayName: Package native profiler
