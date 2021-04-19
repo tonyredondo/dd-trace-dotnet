@@ -103,6 +103,16 @@ stages:
     steps:
     - template: steps/restore-working-directory.yml
 
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        displayName: Download windows tracer home
+        artifact: build-windows-tracer-home
+        path: $(tracerHome)
+
+    - publish: $(System.DefaultWorkingDirectory)
+      displayName: DEBUG Uploading linux tracer home artifact
+      artifact: build-linux-tracer-home-DEBUG
+
     - script: |
         docker build \
           --build-arg DOTNETSDK_VERSION=$(dotnetCoreSdk5Version) \

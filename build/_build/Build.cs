@@ -310,6 +310,7 @@ partial class Build : NukeBuild
         .Unlisted()
         .OnlyWhenStatic(() => IsLinux)
         .DependsOn(CompileNativeSrcLinux)
+        .DependsOn(PublishNativeProfilerWindows)
         .Executes(() =>
         {
             // TODO: Invert this, so it copies _from the bin folder instead of _into_ it
