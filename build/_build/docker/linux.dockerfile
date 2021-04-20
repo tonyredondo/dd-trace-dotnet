@@ -19,7 +19,7 @@ RUN apt-get update \
         rpm \
         ruby \
         ruby-dev \
-        rubygems
+        rubygems \
     && gem install --no-document fpm
 
 
