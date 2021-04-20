@@ -116,6 +116,7 @@ stages:
         docker build \
           --build-arg DOTNETSDK_VERSION=$(dotnetCoreSdk5Version) \
           --tag dd-trace-dotnet/debian-base \
+          --target builder \
           --file "$(System.DefaultWorkingDirectory)/build/_build/docker/linux.dockerfile" \
           "$(System.DefaultWorkingDirectory)/build/_build"
       displayName: Build Docker base image
@@ -232,6 +233,7 @@ stages:
         docker build \
           --build-arg DOTNETSDK_VERSION=$(dotnetCoreSdk5Version) \
           --tag dd-trace-dotnet/debian-base \
+          --target builder \
           --file "$(System.DefaultWorkingDirectory)/build/_build/docker/linux.dockerfile" \
           "$(System.DefaultWorkingDirectory)/build/_build"
       displayName: Build Docker base image
@@ -388,6 +390,10 @@ stages:
     - template: steps/install-dotnet.yml
     - template: steps/restore-working-directory.yml
 
+    - publish: $(System.DefaultWorkingDirectory)
+      displayName: DEBUG Upload working directory before nix build
+      artifact: build-unit-tests-nix-$(vmImage)
+
     - script: ./build.sh CompileManagedUnitTests --skip
       displayName: Compile Managed Unit Tests
 
@@ -439,10 +445,6 @@ stages:
 
     - script: build.cmd CompileIntegrationTests --skip
       displayName: Build integration tests
-
-    - publish: $(System.DefaultWorkingDirectory)
-      displayName: DEBUG Upload working directory after the managed build
-      artifact: build-integration-tests-windows-$(buildPlatform)
 
     - script: build.cmd RunIntegrationTests --skip
       displayName: Run integration tests
