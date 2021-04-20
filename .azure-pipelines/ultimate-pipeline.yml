@@ -164,23 +164,55 @@ stages:
     steps:
     - template: steps/restore-working-directory.yml
 
-    - task: DockerCompose@0
-      displayName: docker-compose run Profiler.Alpine
+    - task: DownloadPipelineArtifact@2
       inputs:
-        containerregistrytype: Container Registry
-        dockerComposeCommand: run -e buildConfiguration=$(buildConfiguration) -e UNIFIED_PIPELINE=true Profiler.Alpine
+        displayName: Download windows tracer home
+        artifact: build-windows-tracer-home
+        path: $(tracerHome)
 
-    - task: DockerCompose@0
-      displayName: docker-compose run package.alpine
-      inputs:
-        containerregistrytype: Container Registry
-        dockerComposeCommand: run -e buildConfiguration=$(buildConfiguration) -e UNIFIED_PIPELINE=true package.alpine
+    - script: |
+        docker build \
+          --build-arg DOTNETSDK_VERSION=$(dotnetCoreSdk5Version) \
+          --tag dd-trace-dotnet/alpine-base \
+          --file "$(System.DefaultWorkingDirectory)/build/_build/docker/alpine.dockerfile" \
+          "$(System.DefaultWorkingDirectory)/build/_build"
+      displayName: Build Docker base image
+
+    - script: |
+        docker run --rm \
+            --mount type=bind,source="$(System.DefaultWorkingDirectory)",target=/project \
+            --env NugetPackageDirectory=/project/$(relativeNugetPackageDirectory) \
+            --env tracerHome=/project/$(relativeTracerHome) \
+            --env artifacts=/project/$(relativeArtifacts) \
+            dd-trace-dotnet/alpine-base \
+            dotnet /build/bin/Debug/_build.dll CompileNativeSrcLinux --skip
+      displayName: Build native profiler
+
+    - script: |
+        docker run --rm \
+            --mount type=bind,source="$(System.DefaultWorkingDirectory)",target=/project \
+            --env NugetPackageDirectory=/project/$(relativeNugetPackageDirectory) \
+            --env tracerHome=/project/$(relativeTracerHome) \
+            --env artifacts=/project/$(relativeArtifacts) \
+            dd-trace-dotnet/alpine-base \
+            dotnet /build/bin/Debug/_build.dll PublishNativeProfilerLinux --skip
+      displayName: Publish native profiler
+
+    - script: |
+        docker run --rm \
+            --mount type=bind,source="$(System.DefaultWorkingDirectory)",target=/project \
+            --env NugetPackageDirectory=/project/$(relativeNugetPackageDirectory) \
+            --env tracerHome=/project/$(relativeTracerHome) \
+            --env artifacts=/project/$(relativeArtifacts) \
+            dd-trace-dotnet/alpine-base \
+            dotnet /build/bin/Debug/_build.dll ZipTracerHome --skip
+      displayName: Package native profiler
 
     - publish: $(System.DefaultWorkingDirectory)/src/Datadog.Trace.ClrProfiler.Native/bin/Release/x64
       displayName: Uploading alpine linux tracer home artifact
       artifact: build-alpine-linux-tracer-home
 
-    - publish: $(System.DefaultWorkingDirectory)/deploy/linux
+    - publish: $(artifacts)/linux-x64
       displayName: Publish Alpine Linux package
       artifact: linux-alpine-packages
 
