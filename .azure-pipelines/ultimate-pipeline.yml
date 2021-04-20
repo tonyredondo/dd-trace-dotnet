@@ -218,26 +218,61 @@ stages:
 
   - job: build_native_linux_arm64
     pool: Arm64
-    workspace:
-      clean: all
 
     steps:
     - template: steps/restore-working-directory.yml
 
-    - task: DockerCompose@0
-      displayName: docker-compose run Profiler
+    - task: DownloadPipelineArtifact@2
       inputs:
-        containerregistrytype: Container Registry
-        dockerComposeCommand: run -e buildConfiguration=$(buildConfiguration) -e UNIFIED_PIPELINE=true Profiler
+        displayName: Download windows tracer home
+        artifact: build-windows-tracer-home
+        path: $(tracerHome)
 
-    - task: DockerCompose@0
-      displayName: docker-compose run package
-      inputs:
-        containerregistrytype: Container Registry
-        dockerComposeCommand: run -e buildConfiguration=$(buildConfiguration) -e UNIFIED_PIPELINE=true package
+    - script: |
+        docker build \
+          --build-arg DOTNETSDK_VERSION=$(dotnetCoreSdk5Version) \
+          --tag dd-trace-dotnet/debian-base \
+          --file "$(System.DefaultWorkingDirectory)/build/_build/docker/linux.dockerfile" \
+          "$(System.DefaultWorkingDirectory)/build/_build"
+      displayName: Build Docker base image
+
+    - script: |
+        docker run --rm \
+            --mount type=bind,source="$(System.DefaultWorkingDirectory)",target=/project \
+            --env NugetPackageDirectory=/project/$(relativeNugetPackageDirectory) \
+            --env tracerHome=/project/$(relativeTracerHome) \
+            --env artifacts=/project/$(relativeArtifacts) \
+            dd-trace-dotnet/debian-base \
+            dotnet /build/bin/Debug/_build.dll CompileNativeSrcLinux --skip
+      displayName: Build native profiler
+
+    - script: |
+        docker run --rm \
+            --mount type=bind,source="$(System.DefaultWorkingDirectory)",target=/project \
+            --env NugetPackageDirectory=/project/$(relativeNugetPackageDirectory) \
+            --env tracerHome=/project/$(relativeTracerHome) \
+            --env artifacts=/project/$(relativeArtifacts) \
+            dd-trace-dotnet/debian-base \
+            dotnet /build/bin/Debug/_build.dll PublishNativeProfilerLinux --skip
+      displayName: Publish native profiler
+
+    - script: |
+        docker run --rm \
+            --mount type=bind,source="$(System.DefaultWorkingDirectory)",target=/project \
+            --env NugetPackageDirectory=/project/$(relativeNugetPackageDirectory) \
+            --env tracerHome=/project/$(relativeTracerHome) \
+            --env artifacts=/project/$(relativeArtifacts) \
+            dd-trace-dotnet/debian-base \
+            dotnet /build/bin/Debug/_build.dll ZipTracerHome --skip
+      displayName: Package native profiler
 
     - publish: $(System.DefaultWorkingDirectory)/src/Datadog.Trace.ClrProfiler.Native/bin/Release/x64
+      displayName: Uploading arm64 tracer home artifact
       artifact: build-linux-tracer-home-arm64
+
+    - publish: $(artifacts)/linux-arm64
+      displayName: Publish arm64 packages
+      artifact: linux-packages
 
 - stage: build_macos
   dependsOn: build_managed # The native build relies on Datadog.Trace.ClrProfiler.Managed.Loader to be built
