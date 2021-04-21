@@ -198,7 +198,7 @@ stages:
       artifact: build-linux-tracer-home-$(matrixName)
 
     - publish: $(artifacts)/linux-x64
-      displayName: Publish Linux packages
+      displayName: Upload linux packages
       artifact: linux-packages-$(matrixName)
 
     - publish: $(System.DefaultWorkingDirectory)
@@ -323,7 +323,7 @@ stages:
   jobs:
   - job: managed
     pool:
-      vmImage: $(macOS-10.15)
+      vmImage: macOS-10.15
     steps:
       - template: steps/install-dotnet.yml
       - template: steps/restore-working-directory.yml
@@ -394,18 +394,6 @@ stages:
             dd-trace-dotnet/$(baseImage)-tester \
             dotnet /build/bin/Debug/_build.dll RunManagedUnitTests --skip
       displayName: Run managed unit tests
-
-    - publish: $(System.DefaultWorkingDirectory)/src/Datadog.Trace.ClrProfiler.Native/build/bin/Release/x64
-      displayName: Uploading linux tracer home artifact
-      artifact: build-linux-tracer-home
-
-    - publish: $(artifacts)/linux-x64
-      displayName: Publish Linux packages
-      artifact: linux-packages
-
-    - publish: $(System.DefaultWorkingDirectory)
-      displayName: Upload working directory after the build
-      artifact: build-linux
 
 - stage: integration_tests_windows
   dependsOn: build_windows
