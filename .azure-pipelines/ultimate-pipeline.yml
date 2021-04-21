@@ -218,8 +218,8 @@ stages:
     - script: ./build.sh CreateRequiredDirectories --skip
       displayName: Create required directories
 
-    - script: ./build.sh RestoreNuGet --skip
-      displayName: NuGet Restore
+    - script: ./build.sh RestoreDotNet --skip
+      displayName: Dotnet Restore
 
     - script: ./build.sh CompileManagedSrc --skip
       displayName: Compile Managed src
