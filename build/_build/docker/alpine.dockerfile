@@ -1,6 +1,6 @@
 ﻿ARG DOTNETSDK_VERSION
 # debian 10 image
-FROM mcr.microsoft.com/dotnet/sdk:$DOTNETSDK_VERSION-alpine3.12
+FROM mcr.microsoft.com/dotnet/sdk:$DOTNETSDK_VERSION-alpine3.12 as builder
 # ubuntu image
 # FROM mcr.microsoft.com/dotnet/sdk:$DOTNETSDK_VERSION-focal
 
