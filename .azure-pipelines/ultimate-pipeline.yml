@@ -400,6 +400,59 @@ stages:
     - script: ./build.sh RunManagedUnitTests --skip
       displayName: Run managed unit tests
 
+  - job: managed_ubuntu
+    pool:
+      vmImage: ubuntu-18.04
+    steps:
+    - script: |
+        docker build \
+          --build-arg DOTNETSDK_VERSION=$(dotnetCoreSdk5Version) \
+          --tag dd-trace-dotnet/debian-base \
+          --target builder \
+          --file "$(System.DefaultWorkingDirectory)/build/_build/docker/linux.dockerfile" \
+          "$(System.DefaultWorkingDirectory)/build/_build"
+      displayName: Build Docker base image
+
+    - script: |
+        docker run --rm \
+            --mount type=bind,source="$(System.DefaultWorkingDirectory)",target=/project \
+            --env NugetPackageDirectory=/project/$(relativeNugetPackageDirectory) \
+            --env tracerHome=/project/$(relativeTracerHome) \
+            --env artifacts=/project/$(relativeArtifacts) \
+            dd-trace-dotnet/debian-base \
+            dotnet /build/bin/Debug/_build.dll RestoreDotNet --skip
+      displayName: Dotnet restore
+
+    - script: |
+        docker run --rm \
+            --mount type=bind,source="$(System.DefaultWorkingDirectory)",target=/project \
+            --env NugetPackageDirectory=/project/$(relativeNugetPackageDirectory) \
+            --env tracerHome=/project/$(relativeTracerHome) \
+            --env artifacts=/project/$(relativeArtifacts) \
+            dd-trace-dotnet/debian-base \
+            dotnet /build/bin/Debug/_build.dll CompileManagedSrc --skip
+      displayName: Compile Managed src
+
+    - script: |
+        docker run --rm \
+            --mount type=bind,source="$(System.DefaultWorkingDirectory)",target=/project \
+            --env NugetPackageDirectory=/project/$(relativeNugetPackageDirectory) \
+            --env tracerHome=/project/$(relativeTracerHome) \
+            --env artifacts=/project/$(relativeArtifacts) \
+            dd-trace-dotnet/debian-base \
+            dotnet /build/bin/Debug/_build.dll CompileManagedUnitTests --skip
+      displayName: Compile Managed Unit Tests
+
+    - script: |
+        docker run --rm \
+            --mount type=bind,source="$(System.DefaultWorkingDirectory)",target=/project \
+            --env NugetPackageDirectory=/project/$(relativeNugetPackageDirectory) \
+            --env tracerHome=/project/$(relativeTracerHome) \
+            --env artifacts=/project/$(relativeArtifacts) \
+            dd-trace-dotnet/debian-base \
+            dotnet /build/bin/Debug/_build.dll RunManagedUnitTests --skip
+      displayName: Run managed unit tests
+
 - stage: integration_tests_windows
   dependsOn: build_managed
   pool:
