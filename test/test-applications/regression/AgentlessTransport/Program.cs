@@ -14,7 +14,8 @@ namespace AgentlessTransport
                 while (iterations-- > 0)
                 {
                     EmitCustomSpans();
-                    Thread.Sleep(300);
+                    Console.WriteLine("Trace complete");
+                    Thread.Sleep(100);
                 }
                 return (int)ExitCode.Success;
             }

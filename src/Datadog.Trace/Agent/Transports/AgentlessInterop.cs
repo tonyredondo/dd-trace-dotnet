@@ -1,6 +1,5 @@
 using System;
 using System.Runtime.InteropServices;
-using System.Threading;
 using Datadog.Trace.Logging;
 
 namespace Datadog.Trace.Agent.Transports
@@ -27,6 +26,11 @@ namespace Datadog.Trace.Agent.Transports
         {
             try
             {
+                if (NativeMethods.IsProfilerAttached())
+                {
+                    Environment.SetEnvironmentVariable("DD_PINVOKE_VERIFIED", "Profiler is attached and verified with PINVOKE call.");
+                }
+
                 Init();
                 // _initDelegate.Invoke();
             }
@@ -38,8 +42,15 @@ namespace Datadog.Trace.Agent.Transports
 
         public static unsafe void MarshalTraces(byte* data, int length)
         {
-            SendTraces(data, length);
-            // _sendTracesDelegateType.Invoke(data, length);
+            try
+            {
+                SendTraces(data, length);
+                // _sendTracesDelegateType.Invoke(data, length);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Unable to send traces");
+            }
         }
 
         public static void LoadAgentless()
@@ -49,6 +60,7 @@ namespace Datadog.Trace.Agent.Transports
                 var agentLibraryPath = Environment.GetEnvironmentVariable("DD_TRACE_AGENT_DLL_PATH");
                 if (agentLibraryPath != null)
                 {
+                    // Assembly.LoadFile(agentLibraryPath);
                     var agentModule = LoadLibrary(agentLibraryPath);
                     if (agentModule == IntPtr.Zero)
                     {
