@@ -272,9 +272,9 @@ stages:
       displayName: Uploading arm64 tracer home artifact
       artifact: build-linux-tracer-home-arm64
 
-    - publish: $(artifacts)/linux-arm64
+    - publish: $(artifacts)/linux-x64
       displayName: Publish arm64 packages
-      artifact: linux-packages
+      artifact: linux-packages-arm64
 
 - stage: build_macos
   dependsOn: build_managed # The native build relies on Datadog.Trace.ClrProfiler.Managed.Loader to be built
@@ -408,7 +408,7 @@ stages:
         docker build \
           --build-arg DOTNETSDK_VERSION=$(dotnetCoreSdk5Version) \
           --tag dd-trace-dotnet/debian-base \
-          --target builder \
+          --target tester \
           --file "$(System.DefaultWorkingDirectory)/build/_build/docker/linux.dockerfile" \
           "$(System.DefaultWorkingDirectory)/build/_build"
       displayName: Build Docker base image
