@@ -40,10 +40,10 @@ resources:
 
 # Stages
 stages:
-- stage: build_managed # todo: rename
+- stage: build
   dependsOn: []
   jobs:
-  - job: windows
+  - job: build_windows
     pool:
       vmImage: windows-2019
     steps:
@@ -98,7 +98,7 @@ stages:
     ##   artifact: windows-tracer-home
 
 - stage: build_linux
-  dependsOn: build_managed # The native build relies on Datadog.Trace.ClrProfiler.Managed.Loader to be built
+  dependsOn: build_windows # The native build relies on Datadog.Trace.ClrProfiler.Managed.Loader to be built
   jobs:
   - job: build_native_linux
     pool:
@@ -277,7 +277,7 @@ stages:
       artifact: linux-packages-arm64
 
 - stage: build_macos
-  dependsOn: build_managed # The native build relies on Datadog.Trace.ClrProfiler.Managed.Loader to be built
+  dependsOn: build_windows # The native build relies on Datadog.Trace.ClrProfiler.Managed.Loader to be built
   jobs:
   - job: build_native_macos
     pool:
@@ -300,7 +300,7 @@ stages:
       artifact: build-macos-tracer-home
 
 - stage: package_windows
-  dependsOn: build_managed
+  dependsOn: build_windows
   pool:
     vmImage: windows-2019
   jobs:
@@ -335,7 +335,7 @@ stages:
         artifact: nuget-packages
 
 - stage: unit_tests_windows
-  dependsOn: build_managed
+  dependsOn: build_windows
   pool:
     vmImage: windows-2019
   jobs:
@@ -368,7 +368,7 @@ stages:
         condition: succeededOrFailed()
 
 - stage: unit_tests_nix
-  dependsOn: build_managed
+  dependsOn: build_windows
   jobs:
   - job: managed
     strategy:
@@ -454,7 +454,7 @@ stages:
       displayName: Run managed unit tests
 
 - stage: integration_tests_windows
-  dependsOn: build_managed
+  dependsOn: build_windows
   pool:
     vmImage: windows-2019
   jobs:
@@ -503,7 +503,7 @@ stages:
       displayName: Run integration tests
 
 - stage: integration_tests_windows_iis
-  dependsOn: [build_managed, package_windows]
+  dependsOn: [build_windows, package_windows]
   jobs:
   - job: Windows_IIS
     timeoutInMinutes: 100
@@ -802,7 +802,7 @@ stages:
       condition: succeededOrFailed()
 
 - stage: benchmarks
-  dependsOn: build_managed
+  dependsOn: build_windows
   condition: and(succeeded(), false)
   jobs:
 
@@ -855,7 +855,7 @@ stages:
         script: 'Start-Sleep -s 120'
 
 - stage: dotnet_tool
-  dependsOn: [build_managed, build_linux, build_macos]
+  dependsOn: [build_windows, build_linux, build_macos]
   jobs:
   - job: build_runner_tool_and_standalone
 
