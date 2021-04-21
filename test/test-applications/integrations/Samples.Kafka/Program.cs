@@ -41,14 +41,20 @@ namespace Samples.Kafka
             var consumeTask2 = Task.Run(() => consumer2.ConsumeWithExplicitCommit(commitEveryXMessages: commitPeriod, cts.Token));
 
             // produce messages sync and async
-            Producer.Produce(topic, numberOfMessagesPerProducer, config);
+            Producer.Produce(topic, numberOfMessagesPerProducer, config, handleDelivery: false);
+
+            Producer.Produce(topic, numberOfMessagesPerProducer, config, handleDelivery: true);
 
             await Producer.ProduceAsync(topic, numberOfMessagesPerProducer, config);
 
-            // try to produce an invalid message
+            // try to produce invalid messages
+            const string invalidTopic = "INVALID-TOPIC";
+            // Producer.Produce(invalidTopic, 1, config, handleDelivery: false); // failure won't be logged, more of a pain to test
+            Producer.Produce(invalidTopic, 1, config, handleDelivery: true); // failure should be logged by delivery handler
+
             try
             {
-                await Producer.ProduceAsync("INVALID-TOPIC", 1, config);
+                await Producer.ProduceAsync(invalidTopic, 1, config);
             }
             catch (Exception ex)
             {

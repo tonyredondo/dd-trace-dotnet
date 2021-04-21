@@ -32,13 +32,18 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
         public static CallTargetState OnMethodBegin<TTarget, TTopicPartition, TMessage, TDeliveryHandler>(TTarget instance, TTopicPartition topicPartition, TMessage message, TDeliveryHandler deliveryHandler)
             where TTopicPartition : ITopicPartition
         {
-            // Scope scope = KafkaHelper.CreateProduceScope(Tracer.Instance, topicPartition);
-            // if (scope is not null)
-            // {
-            //     return new CallTargetState(scope);
-            // }
-            //
-            // // TODO: create a custom IDeliveryHandler to intercept a (successful) delivery result (to record offset etc)?
+            if (deliveryHandler is null)
+            {
+                Scope scope = KafkaHelper.CreateProduceScope(Tracer.Instance, topicPartition);
+                if (scope is not null)
+                {
+                    return new CallTargetState(scope);
+                }
+            }
+            else
+            {
+                // TODO: implement KafkaProduceSyncDeliveryHandlerIntegration
+            }
 
             return CallTargetState.GetDefault();
         }
@@ -53,7 +58,7 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
         /// <returns>A response value, in an async scenario will be T of Task of T</returns>
         public static CallTargetReturn OnMethodEnd<TTarget>(TTarget instance, Exception exception, CallTargetState state)
         {
-            // state.Scope?.DisposeWithException(exception);
+            state.Scope?.DisposeWithException(exception);
             return CallTargetReturn.GetDefault();
         }
     }

@@ -42,7 +42,12 @@ namespace Samples.Kafka
             }
         }
 
-        public static void Produce(string topic, int numMessages, ClientConfig config)
+        public static void Produce(string topic, int numMessages, ClientConfig config, bool handleDelivery)
+        {
+            Produce(topic, numMessages, config, handleDelivery ? HandleDelivery : null);
+        }
+
+        private static void Produce(string topic, int numMessages, ClientConfig config, Action<DeliveryReport<string, string>> deliveryHandler)
         {
             using (var producer = new ProducerBuilder<string, string>(config).Build())
             {
@@ -54,7 +59,7 @@ namespace Samples.Kafka
 
                     Console.WriteLine($"Producing record {i}: {key}...");
 
-                    producer.Produce(topic, message, HandleDelivery);
+                    producer.Produce(topic, message, deliveryHandler);
 
                     if (numMessages % FlushInterval == 0)
                     {

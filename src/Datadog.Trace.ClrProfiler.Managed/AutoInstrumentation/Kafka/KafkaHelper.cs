@@ -14,7 +14,7 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
 
             try
             {
-                var span = CreateProduceSpan(tracer, topicPartition?.Topic);
+                var span = CreateProduceSpan(tracer, topicPartition?.Topic, topicPartition?.Partition);
                 if (span is not null)
                 {
                     scope = tracer.ActivateSpan(span);
@@ -28,7 +28,7 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
             return scope;
         }
 
-        internal static Span CreateProduceSpan(Tracer tracer, string topic)
+        internal static Span CreateProduceSpan(Tracer tracer, string topic, Partition? partition)
         {
             if (!Tracer.Instance.Settings.IsIntegrationEnabled(KafkaConstants.IntegrationId))
             {
@@ -57,6 +57,10 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
 
                 span.Type = SpanTypes.Queue;
                 span.ResourceName = resourceName;
+                if (partition.HasValue && partition.Value.IsSpecial)
+                {
+                    tags.Partition = partition.ToString();
+                }
 
                 tags.SetAnalyticsSampleRate(KafkaConstants.IntegrationId, tracer.Settings, enabledWithGlobalSetting: false);
             }
