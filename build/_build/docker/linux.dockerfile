@@ -37,7 +37,7 @@ FROM builder as tester
 # Install .NET Core runtimes using install script
 RUN curl -sSL https://dot.net/v1/dotnet-install.sh --output dotnet-install.sh \
     && chmod +x ./dotnet-install.sh \
-    && ./dotnet-install.sh --runtime aspnetcore --channel 2.1 \
-    && ./dotnet-install.sh --runtime aspnetcore --channel 3.0 \
-    && ./dotnet-install.sh --runtime aspnetcore --channel 3.1 \
+    && ./dotnet-install.sh --runtime aspnetcore --channel 2.1 --install-dir /usr/share/dotnet --no-path \
+    && ./dotnet-install.sh --runtime aspnetcore --channel 3.0 --install-dir /usr/share/dotnet --no-path \
+    && ./dotnet-install.sh --runtime aspnetcore --channel 3.1 --install-dir /usr/share/dotnet --no-path \
     && rm dotnet-install.sh

@@ -318,38 +318,23 @@ stages:
           testResultsFiles: test/**/test*.xml
         condition: succeededOrFailed()
 
-- stage: unit_tests_nix
-  dependsOn: build_windows
+- stage: unit_tests_macos
+  dependsOn: build_macos
   jobs:
   - job: managed
-    strategy:
-      matrix:
-        linux:
-          poolName: Azure Pipelines
-          vmImage: ubuntu-18.04
-        linux_arm64:
-          poolName: Arm64
-          vmImage:
-        macos:
-          poolName: Azure Pipelines
-          vmImage: macOS-10.15
     pool:
-      name: $(poolName)
-      vmImage: $(vmImage)
-
+      vmImage: $(macOS-10.15)
     steps:
-    - template: steps/install-dotnet.yml
-    - template: steps/restore-working-directory.yml
+      - template: steps/install-dotnet.yml
+      - template: steps/restore-working-directory.yml
+        parameters:
+          artifact: build-macos
 
-    - publish: $(System.DefaultWorkingDirectory)
-      displayName: DEBUG Upload working directory before nix build
-      artifact: build-unit-tests-nix-$(vmImage)
+      - script: ./build.sh CompileManagedUnitTests --skip
+        displayName: Compile Managed Unit Tests
 
-    - script: ./build.sh CompileManagedUnitTests --skip
-      displayName: Compile Managed Unit Tests
-
-    - script: ./build.sh RunManagedUnitTests --skip
-      displayName: Run managed unit tests
+      - script: ./build.sh RunManagedUnitTests --skip
+        displayName: Run managed unit tests
 
 - stage: unit_tests_linux
   dependsOn: [build_linux]
