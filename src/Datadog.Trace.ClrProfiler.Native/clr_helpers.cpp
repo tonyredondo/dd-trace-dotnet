@@ -204,6 +204,8 @@ ModuleInfo GetModuleInfo(ICorProfilerInfo4* info, const ModuleID& module_id) {
 TypeInfo GetTypeInfo(const ComPtr<IMetaDataImport2>& metadata_import,
                      const mdToken& token) {
   mdToken parent_token = mdTokenNil;
+  TypeInfo* parentTypeInfo = nullptr;
+  mdToken parent_type_token = mdTokenNil;
   WCHAR type_name[kNameMaxSize]{};
   DWORD type_name_len = 0;
   DWORD type_flags;
@@ -220,6 +222,12 @@ TypeInfo GetTypeInfo(const ComPtr<IMetaDataImport2>& metadata_import,
       hr = metadata_import->GetTypeDefProps(token, type_name, kNameMaxSize,
                                             &type_name_len, &type_flags,
                                             &type_extends);
+
+      metadata_import->GetNestedClassProps(token, &parent_type_token);
+      if (parent_type_token != mdTokenNil) {
+        parentTypeInfo = new TypeInfo(GetTypeInfo(metadata_import, parent_type_token));
+      }
+
       if (type_extends != mdTokenNil) {
         extendsInfo = new TypeInfo(GetTypeInfo(metadata_import, type_extends));
         type_valueType = extendsInfo->name == WStr("System.ValueType") ||
@@ -240,18 +248,20 @@ TypeInfo GetTypeInfo(const ComPtr<IMetaDataImport2>& metadata_import,
       if (FAILED(hr) || signature_length < 3) {
         return {};
       }
-      
+
       if (signature[0] & ELEMENT_TYPE_GENERICINST) {
         mdToken type_token;
         CorSigUncompressToken(&signature[2], &type_token);
         const auto baseType = GetTypeInfo(metadata_import, type_token);
         return {baseType.id, baseType.name, token, token_type,
-                baseType.extend_from, baseType.valueType, baseType.isGeneric};
+                baseType.extend_from,
+                baseType.valueType,
+                baseType.isGeneric,
+                baseType.parent_type};
       }
     } break;
     case mdtModuleRef:
-      metadata_import->GetModuleRefProps(token, type_name, kNameMaxSize,
-                                         &type_name_len);
+      metadata_import->GetModuleRefProps(token, type_name, kNameMaxSize, &type_name_len);
       break;
     case mdtMemberRef:
       return GetFunctionInfo(metadata_import, token).type;
@@ -271,7 +281,7 @@ TypeInfo GetTypeInfo(const ComPtr<IMetaDataImport2>& metadata_import,
     type_isGeneric = idxFromRight == 1 || idxFromRight == 2;
   }
 
-  return { token, type_name_string, mdTypeSpecNil, token_type, extendsInfo, type_valueType, type_isGeneric };
+  return { token, type_name_string, mdTypeSpecNil, token_type, extendsInfo, type_valueType, type_isGeneric, parentTypeInfo };
 }
 
 mdAssemblyRef FindAssemblyRef(
@@ -310,7 +320,7 @@ std::vector<Integration> FilterIntegrationsByName(
 }
 
 std::vector<IntegrationMethod> FlattenIntegrations(
-    const std::vector<Integration>& integrations, 
+    const std::vector<Integration>& integrations,
     bool is_calltarget_enabled) {
   std::vector<IntegrationMethod> flattened;
 
@@ -1534,10 +1544,10 @@ bool ParseRetType(PCCOR_SIGNATURE& pbCur, PCCOR_SIGNATURE pbEnd) {
   if (*pbCur == ELEMENT_TYPE_CMOD_OPT || *pbCur == ELEMENT_TYPE_CMOD_REQD)
     return false;
 
-  if (pbCur >= pbEnd) 
+  if (pbCur >= pbEnd)
       return false;
 
-  if (*pbCur == ELEMENT_TYPE_TYPEDBYREF) 
+  if (*pbCur == ELEMENT_TYPE_TYPEDBYREF)
       return false;
 
   if (*pbCur == ELEMENT_TYPE_VOID) {
@@ -1545,7 +1555,7 @@ bool ParseRetType(PCCOR_SIGNATURE& pbCur, PCCOR_SIGNATURE pbEnd) {
     return true;
   }
 
-  if (*pbCur == ELEMENT_TYPE_BYREF) 
+  if (*pbCur == ELEMENT_TYPE_BYREF)
       pbCur++;
 
   return ParseType(pbCur, pbEnd);
