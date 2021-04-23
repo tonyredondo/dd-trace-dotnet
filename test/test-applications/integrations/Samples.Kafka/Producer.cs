@@ -14,15 +14,15 @@ namespace Samples.Kafka
         private static readonly TimeSpan FlushTimeout = TimeSpan.FromSeconds(5);
         private static int _messageNumber = 0;
 
-        public static async Task ProduceAsync(string topic, int numMessages, ClientConfig config)
+        public static async Task ProduceAsync(string topic, int numMessages, ClientConfig config, bool isTombstone)
         {
             using (var producer = new ProducerBuilder<string, string>(config).Build())
             {
                 for (var i=0; i<numMessages; ++i)
                 {
                     var messageNumber = Interlocked.Increment(ref _messageNumber);
-                    var key = $"{messageNumber}-Async";
-                    var value = GetMessage(i, isProducedAsync: true);
+                    var key = $"{messageNumber}-Async{(isTombstone ? "-tombstone" : "")}";
+                    var value = isTombstone ? null : GetMessage(i, isProducedAsync: true);
                     var message = new Message<string, string> { Key = key, Value = value };
 
                     Console.WriteLine($"Producing record {i}: {key}...");
@@ -43,12 +43,12 @@ namespace Samples.Kafka
             }
         }
 
-        public static void Produce(string topic, int numMessages, ClientConfig config, bool handleDelivery)
+        public static void Produce(string topic, int numMessages, ClientConfig config, bool handleDelivery, bool isTombstone)
         {
-            Produce(topic, numMessages, config, handleDelivery ? HandleDelivery : null);
+            Produce(topic, numMessages, config, handleDelivery ? HandleDelivery : null, isTombstone);
         }
 
-        private static void Produce(string topic, int numMessages, ClientConfig config, Action<DeliveryReport<string, string>> deliveryHandler)
+        private static void Produce(string topic, int numMessages, ClientConfig config, Action<DeliveryReport<string, string>> deliveryHandler, bool isTombstone)
         {
             using (var producer = new ProducerBuilder<string, string>(config).Build())
             {
@@ -56,11 +56,11 @@ namespace Samples.Kafka
                 {
                     var messageNumber = Interlocked.Increment(ref _messageNumber);
                     var hasHandler = deliveryHandler is not null;
-                    var key = $"{messageNumber}-Sync-{hasHandler}";
-                    var value = GetMessage(i, isProducedAsync: false);
+                    var key = $"{messageNumber}-Sync-{hasHandler}{(isTombstone ? "-tombstone" : "")}";
+                    var value = isTombstone ? null : GetMessage(i, isProducedAsync: false);
                     var message = new Message<string, string> { Key = key, Value = value };
 
-                    Console.WriteLine($"Producing record {i}: {key}...");
+                    Console.WriteLine($"Producing record {i}: {message.Key}...");
 
                     producer.Produce(topic, message, deliveryHandler);
 

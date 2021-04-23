@@ -13,10 +13,12 @@ namespace Datadog.Trace.ClrProfiler.IntegrationTests
     public class KafkaTests : TestHelper
     {
         private const int ExpectedSuccessProducerSpans = 30; // 31 once we have delivery handler
+        private const int ExpectedTombstoneProducerSpans = 30; // 31 once we have delivery handler
         private const int ExpectedErrorProducerSpans = 2; // When no delivery handler, error can't be caught, so we don't test that case
         private const int ExpectedConsumerSpans = 0;
         private const int TotalExpectedSpanCount = ExpectedConsumerSpans
                                                  + ExpectedSuccessProducerSpans
+                                                 + ExpectedTombstoneProducerSpans
                                                  + ExpectedErrorProducerSpans;
 
         private const string ErrorProducerResourceName = "Produce Topic INVALID-TOPIC";
@@ -48,7 +50,7 @@ namespace Datadog.Trace.ClrProfiler.IntegrationTests
             var successfulProducerSpans = allProducerSpans.Where(x => x.Error == 0).ToList();
             var errorProducerSpans = allProducerSpans.Where(x => x.Error > 0).ToList();
 
-            VerifyProducerSpanProperties(successfulProducerSpans, GetSuccessfulResourceName(), ExpectedSuccessProducerSpans);
+            VerifyProducerSpanProperties(successfulProducerSpans, GetSuccessfulResourceName(), ExpectedSuccessProducerSpans + ExpectedTombstoneProducerSpans);
             VerifyProducerSpanProperties(errorProducerSpans, ErrorProducerResourceName, ExpectedErrorProducerSpans);
 
             // Only successful spans with a delivery handler will have an offset
@@ -57,6 +59,10 @@ namespace Datadog.Trace.ClrProfiler.IntegrationTests
                .Select(span => span.Tags[Tags.Offset])
                .Should()
                .OnlyContain(tag => Regex.IsMatch(tag, @"^[0-9]+$"));
+
+            successfulProducerSpans.Where(x => x.Tags.ContainsKey(Tags.Tombstone))
+                                   .Should()
+                                   .HaveCount(ExpectedTombstoneProducerSpans);
 
             // verify have error
             errorProducerSpans.Should().OnlyContain(x => x.Tags.ContainsKey(Tags.ErrorType))

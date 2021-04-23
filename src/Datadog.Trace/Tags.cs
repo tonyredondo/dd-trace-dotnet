@@ -225,6 +225,11 @@ namespace Datadog.Trace
         public const string Offset = "offset";
 
         /// <summary>
+        /// Whether the record was a "tombstone" record
+        /// </summary>
+        public const string Tombstone = "tombstone";
+
+        /// <summary>
         /// The length of time a record has been on the queue
         /// </summary>
         public const string RecordQueueTimeMs = "record.queue_time_ms";

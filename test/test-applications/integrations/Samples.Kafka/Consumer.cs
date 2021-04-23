@@ -9,7 +9,7 @@ namespace Samples.Kafka
     internal class Consumer: IDisposable
     {
         private readonly string _consumerName;
-        private readonly IConsumer<Ignore, string> _consumer;
+        private readonly IConsumer<string, string> _consumer;
 
         public static int TotalAsyncMessages = 0;
         public static int TotalSyncMessages = 0;
@@ -17,7 +17,7 @@ namespace Samples.Kafka
         private Consumer(ConsumerConfig config, string topic, string consumerName)
         {
             _consumerName = consumerName;
-            _consumer = new ConsumerBuilder<Ignore, string>(config).Build();
+            _consumer = new ConsumerBuilder<string, string>(config).Build();
             _consumer.Subscribe(topic);
         }
 
@@ -48,7 +48,7 @@ namespace Samples.Kafka
 
         public void ConsumeWithExplicitCommit(int commitEveryXMessages, CancellationToken cancellationToken = default)
         {
-            ConsumeResult<Ignore, string> consumeResult = null;
+            ConsumeResult<string, string> consumeResult = null;
             try
             {
                 while (!cancellationToken.IsCancellationRequested)
@@ -92,7 +92,7 @@ namespace Samples.Kafka
             }
         }
 
-        private void HandleMessage(ConsumeResult<Ignore, string> consumeResult)
+        private void HandleMessage(ConsumeResult<string, string> consumeResult)
         {
             var kafkaMessage = consumeResult.Message;
             Console.WriteLine($"{_consumerName}: Consuming {consumeResult.TopicPartitionOffset}: {kafkaMessage.Key}, {kafkaMessage.Value}");

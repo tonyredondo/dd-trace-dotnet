@@ -45,7 +45,9 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
 
             try
             {
-                Span span = KafkaHelper.CreateProduceSpan(Tracer.Instance, topic, partition: null);
+                var isTombstone = value is null;
+
+                Span span = KafkaHelper.CreateProduceSpan(Tracer.Instance, topic, partition: null, isTombstone: isTombstone);
                 var newAction = CachedWrapperDelegate<TActionOfDeliveryReport>.CreateWrapper(handler, span);
 
                 Action<ITypedDeliveryHandlerShimAction> updateHandlerAction = inst =>

@@ -11,6 +11,7 @@ namespace Datadog.Trace.Tagging
                 new ReadOnlyProperty<KafkaTags, string>(Trace.Tags.InstrumentationName, t => t.InstrumentationName),
                 new Property<KafkaTags, string>(Trace.Tags.Partition, t => t.Partition, (t, v) => t.Partition = v),
                 new Property<KafkaTags, string>(Trace.Tags.Offset, t => t.Offset, (t, v) => t.Offset = v),
+                new Property<KafkaTags, string>(Trace.Tags.Tombstone, t => t.Tombstone, (t, v) => t.Tombstone = v),
                 new Property<KafkaTags, string>(Trace.Tags.RecordQueueTimeMs, t => t.RecordQueueTimeMs, (t, v) => t.RecordQueueTimeMs = v));
 
         public KafkaTags(string spanKind)
@@ -27,6 +28,8 @@ namespace Datadog.Trace.Tagging
         public string Offset { get; set; }
 
         public string Exchange { get; set; }
+
+        public string Tombstone { get; set; }
 
         public string RecordQueueTimeMs { get; set; }
 

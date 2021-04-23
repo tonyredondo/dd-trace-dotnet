@@ -33,8 +33,10 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
         /// <returns>Calltarget state value</returns>
         public static CallTargetState OnMethodBegin<TTarget, TTopicPartition, TMessage>(TTarget instance, TTopicPartition topicPartition, TMessage message, CancellationToken cancellationToken)
             where TTopicPartition : ITopicPartition
+            where TMessage : IMessage
         {
-            Scope scope = KafkaHelper.CreateProduceScope(Tracer.Instance, topicPartition);
+            var isTombstone = message.Value is null;
+            Scope scope = KafkaHelper.CreateProduceScope(Tracer.Instance, topicPartition, isTombstone: isTombstone);
             if (scope is not null)
             {
                 return new CallTargetState(scope);

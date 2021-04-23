@@ -29,7 +29,6 @@ namespace Samples.Kafka
 
         private static async Task ConsumeAndProduceMessages(string topic, ClientConfig config)
         {
-            var numberOfMessagesPerProducer = 10;
             var commitPeriod = 3;
 
             var cts = new CancellationTokenSource();
@@ -40,26 +39,7 @@ namespace Samples.Kafka
             var consumeTask1 = Task.Run(() => consumer1.Consume(cts.Token));
             var consumeTask2 = Task.Run(() => consumer2.ConsumeWithExplicitCommit(commitEveryXMessages: commitPeriod, cts.Token));
 
-            // produce messages sync and async
-            Producer.Produce(topic, numberOfMessagesPerProducer, config, handleDelivery: false);
-
-            Producer.Produce(topic, numberOfMessagesPerProducer, config, handleDelivery: true);
-
-            await Producer.ProduceAsync(topic, numberOfMessagesPerProducer, config);
-
-            // try to produce invalid messages
-            const string invalidTopic = "INVALID-TOPIC";
-            // Producer.Produce(invalidTopic, 1, config, handleDelivery: false); // failure won't be logged, more of a pain to test
-            Producer.Produce(invalidTopic, 1, config, handleDelivery: true); // failure should be logged by delivery handler
-
-            try
-            {
-                await Producer.ProduceAsync(invalidTopic, 1, config);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error producing a message to an unknown topic (expected): {ex}");
-            }
+            var messagesProduced = await ProduceMessages(topic, config);
 
             // Wait for all messages to be consumed
             // This assumes that the topic starts empty, and nothing else is producing to the topic
@@ -68,7 +48,7 @@ namespace Samples.Kafka
             {
                 var syncCount = Volatile.Read(ref Consumer.TotalSyncMessages);
                 var asyncCount = Volatile.Read(ref Consumer.TotalAsyncMessages);
-                if (syncCount >= numberOfMessagesPerProducer && asyncCount >= numberOfMessagesPerProducer)
+                if (syncCount >= messagesProduced.SyncMessages && asyncCount >= messagesProduced.AsyncMessages)
                 {
                     Console.WriteLine($"All messages produced and consumed");
                     break;
@@ -90,6 +70,53 @@ namespace Samples.Kafka
             await Task.WhenAny(
                 Task.WhenAll(consumeTask1, consumeTask2),
                 Task.Delay(TimeSpan.FromSeconds(5)));
+        }
+
+        private static async Task<MessagesProduced> ProduceMessages(string topic, ClientConfig config)
+        {
+            // produce messages sync and async
+            const int numberOfMessagesPerProducer = 10;
+
+            // Send valid messages
+            Producer.Produce(topic, numberOfMessagesPerProducer, config, handleDelivery: false, isTombstone: false);
+            Producer.Produce(topic, numberOfMessagesPerProducer, config, handleDelivery: true, isTombstone: false);
+            await Producer.ProduceAsync(topic, numberOfMessagesPerProducer, config, isTombstone: false);
+
+            // Send tombstone messages
+            Producer.Produce(topic, numberOfMessagesPerProducer, config, handleDelivery: false, isTombstone: true);
+            Producer.Produce(topic, numberOfMessagesPerProducer, config, handleDelivery: true, isTombstone: true);
+            await Producer.ProduceAsync(topic, numberOfMessagesPerProducer, config, isTombstone: true);
+
+            // try to produce invalid messages
+            const string invalidTopic = "INVALID-TOPIC";
+            // Producer.Produce(invalidTopic, 1, config, handleDelivery: false); // failure won't be logged, more of a pain to test
+            Producer.Produce(invalidTopic, 1, config, handleDelivery: true, isTombstone: false); // failure should be logged by delivery handler
+
+            try
+            {
+                await Producer.ProduceAsync(invalidTopic, 1, config, isTombstone: false);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error producing a message to an unknown topic (expected): {ex}");
+            }
+
+            return new MessagesProduced
+            {
+                SyncMessages = numberOfMessagesPerProducer * 2,
+                AsyncMessages = numberOfMessagesPerProducer * 2,
+                TombstoneSyncMessages = numberOfMessagesPerProducer * 2,
+                TombstoneAsyncMessages = numberOfMessagesPerProducer * 2,
+            };
+        }
+
+        private struct MessagesProduced
+        {
+            public int SyncMessages;
+            public int AsyncMessages;
+
+            public int TombstoneSyncMessages;
+            public int TombstoneAsyncMessages;
         }
     }
 }

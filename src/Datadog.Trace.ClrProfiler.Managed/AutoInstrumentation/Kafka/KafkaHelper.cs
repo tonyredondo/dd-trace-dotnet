@@ -8,13 +8,13 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
     {
         private static readonly IDatadogLogger Log = DatadogLogging.GetLoggerFor(typeof(KafkaHelper));
 
-        internal static Scope CreateProduceScope(Tracer tracer, ITopicPartition topicPartition)
+        internal static Scope CreateProduceScope(Tracer tracer, ITopicPartition topicPartition, bool isTombstone)
         {
             Scope scope = null;
 
             try
             {
-                var span = CreateProduceSpan(tracer, topicPartition?.Topic, topicPartition?.Partition);
+                var span = CreateProduceSpan(tracer, topicPartition?.Topic, topicPartition?.Partition, isTombstone);
                 if (span is not null)
                 {
                     scope = tracer.ActivateSpan(span);
@@ -28,7 +28,7 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
             return scope;
         }
 
-        internal static Span CreateProduceSpan(Tracer tracer, string topic, Partition? partition)
+        internal static Span CreateProduceSpan(Tracer tracer, string topic, Partition? partition, bool isTombstone)
         {
             if (!Tracer.Instance.Settings.IsIntegrationEnabled(KafkaConstants.IntegrationId))
             {
@@ -60,6 +60,11 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
                 if (partition.HasValue && partition.Value.IsSpecial)
                 {
                     tags.Partition = partition.ToString();
+                }
+
+                if (isTombstone)
+                {
+                    tags.Tombstone = "true";
                 }
 
                 // Producer spans should always be measured
