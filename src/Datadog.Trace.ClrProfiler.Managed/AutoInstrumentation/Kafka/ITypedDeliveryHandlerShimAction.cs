@@ -1,4 +1,5 @@
 ﻿using System;
+using Datadog.Trace.DuckTyping;
 
 namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
 {
@@ -8,8 +9,9 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
     public interface ITypedDeliveryHandlerShimAction
     {
         /// <summary>
-        /// Gets the delivery report handler
+        /// Sets the delivery report handler
         /// </summary>
-        public Action<IDeliveryReport> Handler { get; }
+        [Duck(Kind = DuckKind.Field)]
+        public object Handler { set; }
     }
 }

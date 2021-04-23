@@ -12,13 +12,11 @@ namespace Datadog.Trace.ClrProfiler.IntegrationTests
     [Collection(nameof(KafkaTestsCollection))]
     public class KafkaTests : TestHelper
     {
-        private const int ExpectedSuccessProducerSpans = 20; // 31 once we have delivery handler
-        private const int ExpectedErroneouslySuccessfulProducerSpans = 0; // If no delivery handler
-        private const int ExpectedErrorProducerSpans = 1; // 2 when we have delivery handler When no delivery handler, error won't be caught
+        private const int ExpectedSuccessProducerSpans = 30; // 31 once we have delivery handler
+        private const int ExpectedErrorProducerSpans = 2; // When no delivery handler, error can't be caught, so we don't test that case
         private const int ExpectedConsumerSpans = 0;
         private const int TotalExpectedSpanCount = ExpectedConsumerSpans
                                                  + ExpectedSuccessProducerSpans
-                                                 + ExpectedErroneouslySuccessfulProducerSpans
                                                  + ExpectedErrorProducerSpans;
 
         private const string ErrorProducerResourceName = "Produce Topic INVALID-TOPIC";
@@ -55,9 +53,9 @@ namespace Datadog.Trace.ClrProfiler.IntegrationTests
             VerifyProducerSpanProperties(errorProducerSpans, ErrorProducerResourceName, ExpectedErrorProducerSpans);
 
             // verify have error
-            errorProducerSpans.Should()
-                              .OnlyContain(x => x.Tags.ContainsKey(Tags.ErrorType))
-                              .And.OnlyContain(x => x.Tags[Tags.ErrorType] == "Confluent.Kafka.ProduceException`2[System.String,System.String]");
+            errorProducerSpans.Should().OnlyContain(x => x.Tags.ContainsKey(Tags.ErrorType))
+                              .And.ContainSingle(x => x.Tags[Tags.ErrorType] == "Confluent.Kafka.ProduceException`2[System.String,System.String]") // created by async handler
+                              .And.ContainSingle(x => x.Tags[Tags.ErrorType] == "System.Exception"); // created by sync callback handler
         }
 
         private void VerifyProducerSpanProperties(List<MockTracerAgent.Span> producerSpans, string resourceName, int expectedCount)
@@ -67,14 +65,22 @@ namespace Datadog.Trace.ClrProfiler.IntegrationTests
                          .And.OnlyContain(x => x.Service == "Samples.Kafka-kafka")
                          .And.OnlyContain(x => x.Resource == resourceName);
 
-            // // TODO: Confirm partition is displayed correctly [0], [1]
-            // // https://github.com/confluentinc/confluent-kafka-dotnet/blob/master/src/Confluent.Kafka/Partition.cs#L217-L224
-            // var producerTags = producerSpans.Select(x => x.Tags).ToList();
-            // producerTags.Should()
-            //             .OnlyContain(tags => tags.ContainsKey(Trace.Tags.Partition));
+            // TODO: Confirm partition is displayed correctly [0], [1]
+            // https://github.com/confluentinc/confluent-kafka-dotnet/blob/master/src/Confluent.Kafka/Partition.cs#L217-L224
+            var producerTags = producerSpans.Select(x => x.Tags).ToList();
+            // every span should contain a partition tag
+            producerTags.Should()
+                        .OnlyContain(tags => tags.ContainsKey(Trace.Tags.Partition));
 
-            // var producerPartitionTags = producerTags.Select(tags => tags[Tags.Partition]);
-            // producerPartitionTags.Should().OnlyContain(tag => Regex.IsMatch(tag, @"^\[[0-9]\]$"));
+            // Spans that were sent without a delivery handler typically _won't_ have a specific partition (but they may)
+            var producerPartitionTags = producerTags.Select(tags => tags[Tags.Partition]);
+            producerPartitionTags.Should().OnlyContain(tag => Regex.IsMatch(tag, @"^\[(Any|[0-9])\]$"));
+
+            // Only successful spans with a delivery handler will have an offset
+            var producerOffsetTags = producerTags
+                                    .Where(tags => tags.ContainsKey(Tags.Offset))
+                                    .Select(tags => tags[Tags.Offset]);
+            producerOffsetTags.Should().OnlyContain(tag => Regex.IsMatch(tag, @"^[0-9]+$"));
         }
 
         private string GetSuccessfulResourceName()

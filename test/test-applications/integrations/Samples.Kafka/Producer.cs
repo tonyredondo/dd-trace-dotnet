@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using Newtonsoft.Json;
@@ -11,8 +12,7 @@ namespace Samples.Kafka
         // Flush every x messages
         private const int FlushInterval = 3;
         private static readonly TimeSpan FlushTimeout = TimeSpan.FromSeconds(5);
-
-        private static readonly string[] Keys = new[] { "apple", "banana", "orange", "strawberry", "kiwi" };
+        private static int _messageNumber = 0;
 
         public static async Task ProduceAsync(string topic, int numMessages, ClientConfig config)
         {
@@ -20,7 +20,8 @@ namespace Samples.Kafka
             {
                 for (var i=0; i<numMessages; ++i)
                 {
-                    var key = Keys[i % Keys.Length];
+                    var messageNumber = Interlocked.Increment(ref _messageNumber);
+                    var key = $"{messageNumber}-Async";
                     var value = GetMessage(i, isProducedAsync: true);
                     var message = new Message<string, string> { Key = key, Value = value };
 
@@ -53,7 +54,9 @@ namespace Samples.Kafka
             {
                 for (var i=0; i<numMessages; ++i)
                 {
-                    var key = Keys[i % Keys.Length];
+                    var messageNumber = Interlocked.Increment(ref _messageNumber);
+                    var hasHandler = deliveryHandler is not null;
+                    var key = $"{messageNumber}-Sync-{hasHandler}";
                     var value = GetMessage(i, isProducedAsync: false);
                     var message = new Message<string, string> { Key = key, Value = value };
 

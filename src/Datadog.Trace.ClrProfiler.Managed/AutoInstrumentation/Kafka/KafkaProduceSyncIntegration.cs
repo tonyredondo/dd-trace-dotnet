@@ -40,11 +40,6 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
                     return new CallTargetState(scope);
                 }
             }
-            else
-            {
-                // TODO: implement KafkaProduceSyncDeliveryHandlerIntegration
-            }
-
             return CallTargetState.GetDefault();
         }
 
