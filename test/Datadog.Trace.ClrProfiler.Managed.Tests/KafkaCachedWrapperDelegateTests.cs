@@ -2,7 +2,6 @@
 using Datadog.Trace.Agent;
 using Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka;
 using Datadog.Trace.Configuration;
-using Datadog.Trace.DuckTyping;
 using Datadog.Trace.Sampling;
 using FluentAssertions;
 using Moq;
@@ -10,7 +9,7 @@ using Xunit;
 
 namespace Datadog.Trace.ClrProfiler.Managed.Tests
 {
-    public class CachedWrapperDelegateTests
+    public class KafkaCachedWrapperDelegateTests
     {
         [Fact]
         public void CanCreateWrapperDelegate()
@@ -30,16 +29,6 @@ namespace Datadog.Trace.ClrProfiler.Managed.Tests
             wrapper.Invoke(testReport);
             wasOriginalInvoked.Should().BeTrue();
             span.IsFinished.Should().BeTrue();
-        }
-
-        [Fact]
-        public void CanDuckTypeHandlerMethod()
-        {
-            var shim = Parent<string, string>.GetShim();
-
-            var duckShim = shim.DuckCast<ITypedDeliveryHandlerShimAction>();
-
-            duckShim.Should().NotBeNull();
         }
 
         private static Tracer GetTracer()

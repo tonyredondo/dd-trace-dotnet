@@ -48,9 +48,15 @@ namespace Datadog.Trace.ClrProfiler.IntegrationTests
             var successfulProducerSpans = allProducerSpans.Where(x => x.Error == 0).ToList();
             var errorProducerSpans = allProducerSpans.Where(x => x.Error > 0).ToList();
 
-            var resourceName = GetSuccessfulResourceName();
-            VerifyProducerSpanProperties(successfulProducerSpans, resourceName, ExpectedSuccessProducerSpans);
+            VerifyProducerSpanProperties(successfulProducerSpans, GetSuccessfulResourceName(), ExpectedSuccessProducerSpans);
             VerifyProducerSpanProperties(errorProducerSpans, ErrorProducerResourceName, ExpectedErrorProducerSpans);
+
+            // Only successful spans with a delivery handler will have an offset
+            successfulProducerSpans
+               .Where(span => span.Tags.ContainsKey(Tags.Offset))
+               .Select(span => span.Tags[Tags.Offset])
+               .Should()
+               .OnlyContain(tag => Regex.IsMatch(tag, @"^[0-9]+$"));
 
             // verify have error
             errorProducerSpans.Should().OnlyContain(x => x.Tags.ContainsKey(Tags.ErrorType))
@@ -65,7 +71,7 @@ namespace Datadog.Trace.ClrProfiler.IntegrationTests
                          .And.OnlyContain(x => x.Service == "Samples.Kafka-kafka")
                          .And.OnlyContain(x => x.Resource == resourceName);
 
-            // TODO: Confirm partition is displayed correctly [0], [1]
+            // Confirm partition is displayed correctly [0], [1]
             // https://github.com/confluentinc/confluent-kafka-dotnet/blob/master/src/Confluent.Kafka/Partition.cs#L217-L224
             var producerTags = producerSpans.Select(x => x.Tags).ToList();
             // every span should contain a partition tag
@@ -75,12 +81,6 @@ namespace Datadog.Trace.ClrProfiler.IntegrationTests
             // Spans that were sent without a delivery handler typically _won't_ have a specific partition (but they may)
             var producerPartitionTags = producerTags.Select(tags => tags[Tags.Partition]);
             producerPartitionTags.Should().OnlyContain(tag => Regex.IsMatch(tag, @"^\[(Any|[0-9])\]$"));
-
-            // Only successful spans with a delivery handler will have an offset
-            var producerOffsetTags = producerTags
-                                    .Where(tags => tags.ContainsKey(Tags.Offset))
-                                    .Select(tags => tags[Tags.Offset]);
-            producerOffsetTags.Should().OnlyContain(tag => Regex.IsMatch(tag, @"^[0-9]+$"));
         }
 
         private string GetSuccessfulResourceName()
