@@ -15,7 +15,7 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
         MethodName = "ProduceAsync",
         ReturnTypeName = KafkaConstants.TaskDeliveryReportTypeName,
         ParameterTypeNames = new[] { KafkaConstants.TopicPartitionTypeName, KafkaConstants.MessageTypeName, ClrNames.CancellationToken },
-        MinimumVersion = "1.0.0",
+        MinimumVersion = "1.4.0",
         MaximumVersion = "1.*.*",
         IntegrationName = KafkaConstants.IntegrationName)]
     public class KafkaProduceAsyncIntegration

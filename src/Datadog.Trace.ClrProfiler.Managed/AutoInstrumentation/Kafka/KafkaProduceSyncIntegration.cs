@@ -12,7 +12,7 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
         MethodName = "Produce",
         ReturnTypeName = ClrNames.Void,
         ParameterTypeNames = new[] { KafkaConstants.TopicPartitionTypeName, KafkaConstants.MessageTypeName, KafkaConstants.ActionOfDeliveryReportTypeName },
-        MinimumVersion = "1.0.0",
+        MinimumVersion = "1.4.0",
         MaximumVersion = "1.*.*",
         IntegrationName = KafkaConstants.IntegrationName)]
     public class KafkaProduceSyncIntegration
