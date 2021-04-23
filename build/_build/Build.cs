@@ -117,7 +117,7 @@ partial class Build : NukeBuild
 
     Target RestoreNuGet => _ => _
         .Unlisted()
-        // .OnlyWhenStatic(() => IsWin)
+        .OnlyWhenStatic(() => IsWin)
         .After(Clean)
         .Executes(() =>
         {
@@ -130,7 +130,7 @@ partial class Build : NukeBuild
 
     Target RestoreDotNet => _ => _
         .Unlisted()
-        // .OnlyWhenStatic(() => !IsWin)
+        .OnlyWhenStatic(() => !IsWin)
         .After(Clean)
         .Executes(() =>
         {
@@ -146,7 +146,7 @@ partial class Build : NukeBuild
     Target Restore => _ => _
         .After(Clean)
         .DependsOn(CreateRequiredDirectories)
-        // .DependsOn(RestoreDotNet)
+        .DependsOn(RestoreDotNet)
         .DependsOn(RestoreNuGet);
 
     Target CompileManagedSrc => _ => _
@@ -742,7 +742,7 @@ partial class Build : NukeBuild
         _
             .Description("Compiles the source and builds the tracer home directory for local usage")
             .DependsOn(CreateRequiredDirectories)
-            .DependsOn(RestoreNuGet)
+            .DependsOn(Restore)
             .DependsOn(CompileManagedSrc)
             .DependsOn(CompileNativeSrc)
             .DependsOn(BuildTracerHome);
@@ -751,7 +751,7 @@ partial class Build : NukeBuild
         _
             .Description("Convenience method for running the same build steps as the full Windows CI build")
             .DependsOn(CreateRequiredDirectories)
-            .DependsOn(RestoreNuGet)
+            .DependsOn(Restore)
             .DependsOn(CompileManagedSrc)
             .DependsOn(CompileNativeSrc)
             .DependsOn(BuildTracerHome)
@@ -772,7 +772,7 @@ partial class Build : NukeBuild
             .Description("Convenience method for running 'build' in the Windows CI build")
             .DependsOn(Clean)
             .DependsOn(CreateRequiredDirectories)
-            .DependsOn(RestoreNuGet)
+            .DependsOn(Restore)
             .DependsOn(CompileManagedSrc)
             .DependsOn(PublishManagedProfiler)
             .DependsOn(CompileNativeSrcWindows)

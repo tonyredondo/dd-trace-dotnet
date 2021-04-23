@@ -558,26 +558,10 @@ stages:
       TestAllPackageVersions: true
 
     steps:
-    - checkout: none
-
-    - task: DownloadPipelineArtifact@2
-      inputs:
-        artifact: build-managed
-        path: $(System.DefaultWorkingDirectory)
-
-    - download: current
-      artifact: build-linux-tracer-home
-
-    - task: CopyFiles@2
-      inputs:
-        sourceFolder: $(Pipeline.Workspace)/build-linux-tracer-home
-        targetFolder: $(System.DefaultWorkingDirectory)/src/Datadog.Trace.ClrProfiler.Native/bin/$(buildConfiguration)/x64
-
-    - script: |
-        chmod +x $(System.DefaultWorkingDirectory)/build/docker/build.sh
-      displayName: 'Workaround: Restore wiped executable permission on build/docker/build.sh'
-
-    - task: DockerCompose@0
+    - template: steps/restore-working-directory.yml
+     
+     # TODO: implement build.sh in Build.cs 
+     - task: DockerCompose@0
       displayName: docker-compose run build
       inputs:
         containerregistrytype: Container Registry
