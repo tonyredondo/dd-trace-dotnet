@@ -38,24 +38,10 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
         /// <returns>Calltarget state value</returns>
         public static CallTargetState OnMethodBegin<TTarget, TKey, TValue, TActionOfDeliveryReport>(TTarget instance, string topic, TKey key, TValue value, TActionOfDeliveryReport handler)
         {
-            Logger.Information("##### TypedDeliveryHandlerShim_Action.OnMethodBegin");
-            Logger.Information("##### type is {type}, {runtimeType}", typeof(TTarget), instance.GetType());
-
             if (handler is null)
             {
-                Logger.Information("##### Handler was null, bailing out");
                 return CallTargetState.GetDefault();
             }
-
-            // var fieldInfo = typeof(TTarget).GetField("Handler", BindingFlags.Instance | BindingFlags.Public);
-            // if (fieldInfo is null)
-            // {
-            //     Logger.Warning("##### field info  was null, bailing out");
-            //     var allFields = typeof(TTarget).GetFields();
-            //     var allMembers = typeof(TTarget).GetMembers(BindingFlags.Public | BindingFlags.NonPublic);
-            //     Logger.Warning("Found the following members on type {type}: {members}", typeof(TTarget), string.Join(", ", allMembers.Select(x => x.Name)));
-            //     return CallTargetState.GetDefault();
-            // }
 
             try
             {
@@ -66,24 +52,24 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
                 {
                     try
                     {
-                        Logger.Information("##### Setting updated handler");
                         inst.Handler = newAction;
-                        // fieldInfo.SetValue(instance, newAction);
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error(ex, "##### Error Setting updated handler");
-                        throw;
+                        Logger.Error(ex, "There was an error updating the delivery report handler to ");
+                        // Not ideal to close the span here immediately, but as we can't trace the result,
+                        // we don't really have a choice
+                        span.Finish();
                     }
                 };
 
                 // store the call to update the handler variable as state
-                // so we update it at the end of the constructor
+                // so we update it at the _end_ of the constructor
                 return new CallTargetState(scope: null, state: updateHandlerAction);
             }
             catch (Exception ex)
             {
-                Logger.Error(ex, "##### TypedDeliveryHandlerShim_Action.OnMethodEnd");
+                Logger.Error(ex, "Error creating wrapped delegate for delivery report");
                 return CallTargetState.GetDefault();
             }
         }
@@ -99,17 +85,12 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
         public static CallTargetReturn OnMethodEnd<TTarget>(TTarget instance, Exception exception, CallTargetState state)
             // where TTarget : ITypedDeliveryHandlerShimAction
         {
-            Logger.Information("##### TypedDeliveryHandlerShim_Action.OnMethodEnd");
-            Logger.Information("##### type is {type}, {runtimeType}", typeof(TTarget), instance.GetType());
-
             if (state.State is Action<ITypedDeliveryHandlerShimAction> updateHandlerAction
              && instance.TryDuckCast<ITypedDeliveryHandlerShimAction>(out var shim))
             {
-                Logger.Information("##### Handler was not null. Invoking");
                 updateHandlerAction.Invoke(shim);
             }
 
-            Logger.Information("##### Returning default");
             return CallTargetReturn.GetDefault();
         }
 
@@ -125,16 +106,13 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
             return new Action<TDeliveryReport>(
                 value =>
                 {
-                    Logger.Information("##### Delivery report handler invoked");
                     if (span.Tags is KafkaTags tags && value.TryDuckCast<IDeliveryReport>(out var report))
                     {
-                        Logger.Information("##### We're in business");
                         var isError = report?.Error is not null && report.Error.IsError;
                         if (isError)
                         {
-                            Logger.Information("##### Supposedly have an error {err}", report.Error);
                             // Set the error tags manually, as we don't have an exception + stack trace here
-                            // Should we create one?
+                            // Should we create a stack trace manually?
                             var ex = new Exception(report.Error.ToString());
                             span.SetException(ex);
                         }
@@ -154,12 +132,10 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
                     // call previous delegate
                     try
                     {
-                        Logger.Information("##### Invoking original handler");
                         originalHandler(value);
                     }
                     finally
                     {
-                        Logger.Information("##### Closing span");
                         span.Finish();
                     }
                 });
