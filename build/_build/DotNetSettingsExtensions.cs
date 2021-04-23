@@ -41,10 +41,10 @@ internal static class DotNetSettingsExtensions
             arg => arg.Add($"/p:\"Platform={platform}\""));
     }
     
-    public static T SetDDEnvironmentVariables<T>(this T settings)
+    public static T SetDDEnvironmentVariables<T>(this T settings, string serviceName)
         where T: ToolSettings
     {
-        return settings.SetProcessEnvironmentVariable("DD_SERVICE_NAME", "dd-tracer-dotnet");
+        return settings.SetProcessEnvironmentVariable("DD_SERVICE_NAME", serviceName);
     }
     
     public static T SetProcessEnvironmentVariables<T>(this T settings, IEnumerable<KeyValuePair<string, string>> variables)

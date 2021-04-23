@@ -392,7 +392,7 @@ partial class Build : NukeBuild
                 .EnableNoRestore()
                 .EnableNoBuild()
                 .SetConfiguration(Configuration)
-                .SetDDEnvironmentVariables()
+                .SetDDEnvironmentVariables("dd-tracer-dotnet")
                 .CombineWith(testProjects, (x, project) => x
                     .SetProjectFile(project)));
         });
@@ -702,6 +702,40 @@ partial class Build : NukeBuild
                     CopyDirectoryRecursively(source, target, DirectoryExistsPolicy.Fail, FileExistsPolicy.Fail);
                 }
             });
+        });
+
+    Target BuildRunnerTool => _ => _
+        // Currently requires manual copying of files into expected locations
+        .Unlisted()
+        .Executes(() =>
+        {
+            DotNetBuild(x => x
+                .SetProjectFile(Solution.GetProject(Projects.RunnerTool))
+                .EnableNoRestore()
+                .EnableNoDependencies()
+                .SetConfiguration(Configuration)
+                .SetNoWarnDotNetCore3()
+                .SetDDEnvironmentVariables("dd-trace-dotnet-runner-tool"));
+        });
+
+    Target BuildStandaloneTool => _ => _
+        // Currently requires manual copying of files into expected locations
+        .Unlisted()
+        .Executes(() =>
+        {
+            var runtimes = new[] {"win-x86", "win-x64", "linux-x64", "linux-musl-x64", "osx-x64"};
+            DotNetPublish(x => x
+                .SetProject(Solution.GetProject(Projects.StandaloneTool))
+                // Have to do a restore currently as we're specifying specific runtime
+                // .EnableNoRestore()
+                .EnableNoDependencies()
+                .SetFramework(TargetFramework.NETCOREAPP3_1)
+                .SetConfiguration(Configuration)
+                .SetNoWarnDotNetCore3()
+                .SetDDEnvironmentVariables("dd-trace-dotnet-runner-tool")
+                .CombineWith(runtimes, (c, runtime) => c
+                    .SetRuntime(runtime)));
+                
         });
 
     Target LocalBuild => _ =>

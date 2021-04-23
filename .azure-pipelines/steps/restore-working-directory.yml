@@ -5,8 +5,8 @@ parameters:
 
 steps:
 - task: DownloadPipelineArtifact@2
+  displayName: Download working dir
   inputs:
-    displayName: Download working dir
     artifact: ${{ parameters.artifact }}
     patterns: "**/@(bin|obj|packages)/**"
     path: $(System.DefaultWorkingDirectory)
