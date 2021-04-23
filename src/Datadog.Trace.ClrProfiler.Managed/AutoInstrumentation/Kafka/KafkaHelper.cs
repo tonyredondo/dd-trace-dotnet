@@ -62,6 +62,9 @@ namespace Datadog.Trace.ClrProfiler.AutoInstrumentation.Kafka
                     tags.Partition = partition.ToString();
                 }
 
+                // Producer spans should always be measured
+                span.SetTag(Tags.Measured, "1");
+
                 tags.SetAnalyticsSampleRate(KafkaConstants.IntegrationId, tracer.Settings, enabledWithGlobalSetting: false);
             }
             catch (Exception ex)

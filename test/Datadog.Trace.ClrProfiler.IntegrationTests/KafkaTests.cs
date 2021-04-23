@@ -69,7 +69,8 @@ namespace Datadog.Trace.ClrProfiler.IntegrationTests
             producerSpans.Should()
                          .HaveCount(expectedCount)
                          .And.OnlyContain(x => x.Service == "Samples.Kafka-kafka")
-                         .And.OnlyContain(x => x.Resource == resourceName);
+                         .And.OnlyContain(x => x.Resource == resourceName)
+                         .And.OnlyContain(x => x.Metrics.ContainsKey(Tags.Measured) && x.Metrics[Tags.Measured] == 1.0);
 
             // Confirm partition is displayed correctly [0], [1]
             // https://github.com/confluentinc/confluent-kafka-dotnet/blob/master/src/Confluent.Kafka/Partition.cs#L217-L224
